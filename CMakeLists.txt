@@ -3,11 +3,15 @@ project(eval_odometry)
 
 set(CMAKE_CXX_STANDARD 11)
 
-LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
+#LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 
 include_directories(
         include
 )
 
-set(SOURCE_FILES src/evaluate.cpp src/matrix.cpp)
-add_executable(eval_odometry ${SOURCE_FILES})
+set(SOURCE_FILES1 src/evaluate_custom.cpp src/matrix.cpp)
+set(SOURCE_FILES2 src/evaluate_kitti.cpp src/matrix.cpp)
+
+add_executable(eval_odometry ${SOURCE_FILES1})
+
+add_executable(eval_kitti ${SOURCE_FILES2})

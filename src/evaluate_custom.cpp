@@ -408,11 +408,11 @@ void saveStats (vector<errors> err,string dir) {
     fclose(fp);
 }
 
-bool eval (string result_sha,Mail* mail) {
+bool eval (string result_sha, int num_test ,Mail* mail) {
 
     // ground truth and result directories
-    string gt_dir         = "data/odometry/poses";
-    string result_dir     = "results/" + result_sha;
+    string gt_dir         = "eval_data/gt";
+    string result_dir     = "eval_data/results/" + result_sha;
     string error_dir      = result_dir + "/errors";
     string plot_path_dir  = result_dir + "/plot_path";
     string plot_error_dir = result_dir + "/plot_error";
@@ -426,7 +426,7 @@ bool eval (string result_sha,Mail* mail) {
     vector<errors> total_err;
 
     // for all sequences do
-    for (int32_t i=11; i<22; i++) {
+    for (int32_t i = 1; i < num_test + 1; i++) {
 
         // file name
         char file_name[256];
@@ -484,25 +484,22 @@ bool eval (string result_sha,Mail* mail) {
 int32_t main (int32_t argc,char *argv[]) {
 
     // we need 2 or 4 arguments!
-    if (argc!=2 && argc!=4) {
-        cout << "Usage: ./eval_odometry result_sha [user_sha email]" << endl;
+    if (argc!=3) {
+        cout << "Usage: ./eval_odometry result_sha num_test" << endl;
         return 1;
     }
 
     // read arguments
     string result_sha = argv[1];
+    int num_test = atoi(argv[2]);
 
     Mail *mail;
-    if (argc==4) mail = new Mail(argv[3]);
-    else         mail = new Mail();
-    mail->msg("Thank you for participating in our evaluation!");
+    mail = new Mail();
+    mail->msg("Customized visual odometry evaluation.");
 
     // run evaluation
-    bool success = eval(result_sha,mail);
-    // if (argc==4) mail->finalize(success,"odometry",result_sha,argv[2]);
-    // else         mail->finalize(success,"odometry",result_sha);
+    eval(result_sha,mail);
 
-    // send mail and exit
     delete mail;
     return 0;
 }

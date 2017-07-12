@@ -36,3 +36,4 @@ cmake-build-debug/
 bag/
 data/
 results/
+eval_data/
