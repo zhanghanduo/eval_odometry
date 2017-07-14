@@ -6,7 +6,8 @@
 #include <math.h>
 #include <vector>
 #include <limits>
-
+#include <unistd.h>
+#include <string.h>
 #include "mail.h"
 #include "matrix.h"
 
@@ -16,6 +17,13 @@ using namespace std;
 // float lengths[] = {5,10,50,100,150,200,250,300,350,400};
 float lengths[] = {100,200,300,400,500,600,700,800};
 int32_t num_lengths = 8;
+
+std::string getexepath()
+{
+    char result[ 256 ];
+    ssize_t count = readlink( "/proc/self/exe", result, 256 );
+    return std::string( result, (count > 0) ? count : 0 );
+}
 
 struct errors {
     int32_t first_frame;
@@ -410,9 +418,12 @@ void saveStats (vector<errors> err,string dir) {
 
 bool eval (string result_sha, int num_test ,Mail* mail) {
 
+    string work_dir_build = getexepath();
+    string work_dir = work_dir_build.substr(0, work_dir_build.find("cmake-build"));
+    cout << "current working dir is: " << work_dir << endl;
     // ground truth and result directories
-    string gt_dir         = "eval_data/gt";
-    string result_dir     = "eval_data/results/" + result_sha;
+    string gt_dir         = work_dir + "eval_data/gt";
+    string result_dir     = work_dir + "eval_data/results/" + result_sha;
     string error_dir      = result_dir + "/errors";
     string plot_path_dir  = result_dir + "/plot_path";
     string plot_error_dir = result_dir + "/plot_error";
@@ -498,7 +509,7 @@ int32_t main (int32_t argc,char *argv[]) {
     mail->msg("Customized visual odometry evaluation.");
 
     // run evaluation
-    eval(result_sha,mail);
+    eval(result_sha,num_test, mail);
 
     delete mail;
     return 0;
