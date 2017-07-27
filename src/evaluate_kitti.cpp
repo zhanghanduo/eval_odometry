@@ -1,11 +1,9 @@
-//
-// Created by zh on 12/7/17.
-//
 #include <iostream>
 #include <stdio.h>
 #include <math.h>
 #include <vector>
 #include <limits>
+#include <fstream>
 
 #include "mail.h"
 #include "matrix.h"
@@ -27,6 +25,7 @@ struct errors {
             first_frame(first_frame),r_err(r_err),t_err(t_err),len(len),speed(speed) {}
 };
 
+// Load poses from file into a vector
 vector<Matrix> loadPoses(string file_name) {
     vector<Matrix> poses;
     FILE *fp = fopen(file_name.c_str(),"r");
@@ -45,6 +44,7 @@ vector<Matrix> loadPoses(string file_name) {
     return poses;
 }
 
+// Compute distances from the starting pose
 vector<float> trajectoryDistances (vector<Matrix> &poses) {
     vector<float> dist;
     dist.push_back(0);
@@ -59,13 +59,21 @@ vector<float> trajectoryDistances (vector<Matrix> &poses) {
     return dist;
 }
 
-int32_t lastFrameFromSegmentLength(vector<float> &dist,int32_t first_frame,float len) {
+// Finds a frame that is 
+int32_t lastFrameFromSegmentLength(vector<float> &dist,int32_t first_frame,float len, vector<pair<bool, int> > &poses_saved) {
     for (int32_t i=first_frame; i<dist.size(); i++)
-        if (dist[i]>dist[first_frame]+len)
-            return i;
+        // If the pose is far away enough
+        if (dist[i]>(dist[first_frame]+len))
+            // If the pose is saved, return the index in the stored poses
+            if (poses_saved[i].first){
+                return poses_saved[i].second;
+            }
+    // return i;
+    // If cannot find a pose that far enough away
     return -1;
 }
 
+// Computes the rotation error
 inline float rotationError(Matrix &pose_error) {
     float a = pose_error.val[0][0];
     float b = pose_error.val[1][1];
@@ -74,6 +82,7 @@ inline float rotationError(Matrix &pose_error) {
     return acos(max(min(d,1.0f),-1.0f));
 }
 
+// Computes the translation error
 inline float translationError(Matrix &pose_error) {
     float dx = pose_error.val[0][3];
     float dy = pose_error.val[1][3];
@@ -81,7 +90,8 @@ inline float translationError(Matrix &pose_error) {
     return sqrt(dx*dx+dy*dy+dz*dz);
 }
 
-vector<errors> calcSequenceErrors (vector<Matrix> &poses_gt,vector<Matrix> &poses_result) {
+// Computes the 
+vector<errors> calcSequenceErrors (vector<Matrix> &poses_gt, vector<Matrix> &poses_result, vector<pair<bool, int> > &poses_saved) {
 
     // error vector
     vector<errors> err;
@@ -89,24 +99,40 @@ vector<errors> calcSequenceErrors (vector<Matrix> &poses_gt,vector<Matrix> &pose
     // parameters
     int32_t step_size = 10; // every second
 
-    // pre-compute distances (from ground truth as reference)
+    // pre-compute distances (from ground truth as reference) from the starting pose
+    // Assuming that the error isn't that much
     vector<float> dist = trajectoryDistances(poses_gt);
 
-    // for all start positions do
+    // for all start positions find
     for (int32_t first_frame=0; first_frame<poses_gt.size(); first_frame+=step_size) {
+        // Make sure that have a stored pose for the first frame
+        // Case if not stored / doesn't exist
+        while (first_frame < poses_result.size() && !poses_saved[first_frame].first)
+        {
+            first_frame++;
+        }
 
-        // for all segment lengths do
+        // Exit if there are no more poses
+        if (!(first_frame < poses_result.size()))
+        {
+            std::cout << "NO MORE POSES!" << std::endl;
+            break;
+        }
+
+        // for all segment lengths compute the frame for the other end
         for (int32_t i=0; i<num_lengths; i++) {
 
             // current length
             float len = lengths[i];
 
             // compute last frame
-            int32_t last_frame = lastFrameFromSegmentLength(dist,first_frame,len);
+            int32_t last_frame = lastFrameFromSegmentLength(dist,first_frame,len, poses_saved);
 
             // continue, if sequence not long enough
+            // TODO: should be able to break out of the loop b/c all the longer lengths will be too long?
             if (last_frame==-1)
-                continue;
+                break;
+            // continue;
 
             // compute rotational and translational errors
             Matrix pose_delta_gt     = Matrix::inv(poses_gt[first_frame])*poses_gt[last_frame];
@@ -145,15 +171,17 @@ void saveSequenceErrors (vector<errors> &err,string file_name) {
 void savePathPlot (vector<Matrix> &poses_gt,vector<Matrix> &poses_result,string file_name) {
 
     // parameters
-    int32_t step_size = 3;
+    int32_t step_size = 1;
 
     // open file
     FILE *fp = fopen(file_name.c_str(),"w");
 
     // save x/z coordinates of all frames to file
-    for (int32_t i=0; i<poses_gt.size(); i+=step_size)
+    for (int32_t i=0; i<poses_result.size(); i+=step_size)
+    {
         fprintf(fp,"%f %f %f %f\n",poses_gt[i].val[0][3],poses_gt[i].val[2][3],
                 poses_result[i].val[0][3],poses_result[i].val[2][3]);
+    }
 
     // close file
     fclose(fp);
@@ -191,6 +219,7 @@ vector<int32_t> computeRoi (vector<Matrix> &poses_gt,vector<Matrix> &poses_resul
     roi.push_back((int32_t)(mx+r));
     roi.push_back((int32_t)(mz-r));
     roi.push_back((int32_t)(mz+r));
+
     return roi;
 }
 
@@ -408,102 +437,408 @@ void saveStats (vector<errors> err,string dir) {
     fclose(fp);
 }
 
-bool eval (string result_sha,Mail* mail) {
+// Load the saved_poses file
+std::vector<std::pair<bool, int> > load_saved_poses(std::string saved_poses_path)
+{
+    std::vector<std::pair<bool, int> > saved_poses;
 
-    // ground truth and result directories
-    string gt_dir         = "data/odometry/poses";
-    string result_dir     = "results/" + result_sha;
-    string error_dir      = result_dir + "/errors";
-    string plot_path_dir  = result_dir + "/plot_path";
-    string plot_error_dir = result_dir + "/plot_error";
+    ifstream file (saved_poses_path.c_str());
+    std::pair<bool, int>  value;
 
-    // create output directories
-    system(("mkdir " + error_dir).c_str());
-    system(("mkdir " + plot_path_dir).c_str());
-    system(("mkdir " + plot_error_dir).c_str());
+    int num_vals = 0;
+    file >> num_vals;
 
-    // total errors
-    vector<errors> total_err;
+    std::cout << "Num vals is: " << num_vals << std::endl;
 
-    // for all sequences do
-    for (int32_t i=11; i<22; i++) {
-
-        // file name
-        char file_name[256];
-        sprintf(file_name,"%02d.txt",i);
-
-        // read ground truth and result poses
-        vector<Matrix> poses_gt     = loadPoses(gt_dir + "/" + file_name);
-        vector<Matrix> poses_result = loadPoses(result_dir + "/data/" + file_name);
-
-        // plot status
-        mail->msg("Processing: %s, poses: %d/%d",file_name,poses_result.size(),poses_gt.size());
-
-        // check for errors
-        if (poses_gt.size()==0 || poses_result.size()!=poses_gt.size()) {
-            mail->msg("ERROR: Couldn't read (all) poses of: %s", file_name);
-            return false;
-        }
-
-        // compute sequence errors
-        vector<errors> seq_err = calcSequenceErrors(poses_gt,poses_result);
-        saveSequenceErrors(seq_err,error_dir + "/" + file_name);
-
-        // add to total errors
-        total_err.insert(total_err.end(),seq_err.begin(),seq_err.end());
-
-        // for first half => plot trajectory and compute individual stats
-        if (i<=15) {
-
-            // save + plot bird's eye view trajectories
-            savePathPlot(poses_gt,poses_result,plot_path_dir + "/" + file_name);
-            vector<int32_t> roi = computeRoi(poses_gt,poses_result);
-            plotPathPlot(plot_path_dir,roi,i);
-
-            // save + plot individual errors
-            char prefix[16];
-            sprintf(prefix,"%02d",i);
-            saveErrorPlots(seq_err,plot_error_dir,prefix);
-            plotErrorPlots(plot_error_dir,prefix);
-        }
+    for (int i = 0; i < num_vals; i++)
+    {
+        int first_val;
+        int second_val;
+        file >> first_val;
+        file >> second_val;
+        value.first = first_val;
+        value.second = second_val;
+        saved_poses.push_back(value);
     }
 
-    // save + plot total errors + summary statistics
-    if (total_err.size()>0) {
-        char prefix[16];
-        sprintf(prefix,"avg");
-        saveErrorPlots(total_err,plot_error_dir,prefix);
-        plotErrorPlots(plot_error_dir,prefix);
-        saveStats(total_err,result_dir);
+    return saved_poses;
+}
+
+void saveLengthErrorPlots(vector<errors> &seq_err,string plot_error_dir,char* prefix) {
+
+    // for each segment length do
+    for (int32_t i=0; i<num_lengths; i++) {
+
+        // current length
+        int len = lengths[i];
+
+        // file names
+        char file_name_tl[1024]; sprintf(file_name_tl,"%s/%s_%02d_tl.txt",plot_error_dir.c_str(),prefix, len);
+        char file_name_rl[1024]; sprintf(file_name_rl,"%s/%s_%02d_rl.txt",plot_error_dir.c_str(),prefix, len);
+
+        // open files
+        FILE *fp_tl = fopen(file_name_tl,"w");
+        FILE *fp_rl = fopen(file_name_rl,"w");
+
+        std::cout << "file_name_tl: " << file_name_tl << std::endl;
+        std::cout << "file_name_rl: " << file_name_rl << std::endl;
+
+        // for all errors get the lengths that are of the current length and save the errors
+        for (vector<errors>::iterator it=seq_err.begin(); it!=seq_err.end(); it++) {
+            if (fabs(it->len-len)<1.0) {
+                fprintf(fp_tl,"%d %f\n",it->first_frame,it->t_err);
+                fprintf(fp_rl,"%d %f\n",it->first_frame,it->r_err);
+            }
+        }
+
+        // close files
+        fclose(fp_tl);
+        fclose(fp_rl);
+    }
+}
+
+void plotLengthErrorPlots (string dir,char* prefix) {
+
+    char command[1024];
+
+    // for each segment length do
+    for (int32_t k=0; k<num_lengths; k++) {
+        // current length
+        int len = lengths[k];
+        // for both error plots do
+        for (int32_t i=0; i<2; i++) {
+
+            // create suffix
+            char suffix[16];
+            switch (i) {
+                case 0: sprintf(suffix,"tl"); break;
+                case 1: sprintf(suffix,"rl"); break;
+            }
+
+            // gnuplot file name
+            char file_name[1024]; char full_name[1024];
+            sprintf(file_name,"%s_%02d_%s.gp",prefix,len,suffix);
+            sprintf(full_name,"%s/%s",dir.c_str(), file_name);
+
+            // create png + eps
+            for (int32_t j=0; j<2; j++) {
+
+                // open file
+                FILE *fp = fopen(full_name,"w");
+
+                // std::cout << "full_name: " << full_name << std::endl;
+
+                // save gnuplot instructions
+                if (j==0) {
+                    fprintf(fp,"set term png size 500,250 font \"Helvetica\" 11\n");
+                    fprintf(fp,"set output \"%s_%02d_%s.png\"\n",prefix,len,suffix);
+                } else {
+                    fprintf(fp,"set term postscript eps enhanced color\n");
+                    fprintf(fp,"set output \"%s_%02d_%s.eps\"\n",prefix,len,suffix);
+                }
+
+                // start plot at 0
+                fprintf(fp,"set size ratio 0.5\n");
+                fprintf(fp,"set yrange [0:*]\n");
+
+                // x label
+                if (i<=1) fprintf(fp,"set xlabel \"Frame Number\"\n");
+                else      fprintf(fp,"set xlabel \"Speed [km/h]\"\n");
+
+                // y label
+                if (i==0 || i==2) fprintf(fp,"set ylabel \"Translation Error [%%]\"\n");
+                else              fprintf(fp,"set ylabel \"Rotation Error [deg/m]\"\n");
+
+                // plot error curve
+                fprintf(fp,"plot \"%s_%02d_%s.txt\" using ",prefix,len,suffix);
+                switch (i) {
+                    case 0: fprintf(fp,"1:($2*100) title 'Translation Error with Length_%02d'", len); break;
+                    case 1: fprintf(fp,"1:($2*57.3) title 'Rotation Error with Length_%02d'", len); break;
+                }
+                fprintf(fp," lc rgb \"#0000FF\" pt 4 w linespoints\n");
+
+                // close file
+                fclose(fp);
+
+                // run gnuplot => create png + eps
+                sprintf(command,"cd %s; gnuplot %s",dir.c_str(),file_name);
+                system(command);
+            }
+
+            // create pdf and crop
+            sprintf(command,"cd %s; ps2pdf %s_%02d_%s.eps %s_%02d_%s_large.pdf",dir.c_str(),prefix,len,suffix,prefix,len,suffix);
+            system(command);
+            sprintf(command,"cd %s; pdfcrop %s_%02d_%s_large.pdf %s_%02d_%s.pdf",dir.c_str(),prefix,len,suffix,prefix,len,suffix);
+            system(command);
+            sprintf(command,"cd %s; rm %s_%02d_%s_large.pdf",dir.c_str(),prefix,len,suffix);
+            system(command);
+        }
+    }
+}
+
+// Computes the rotation error
+inline float indiv_trans_rmse(Matrix &pose1, Matrix &pose2) {
+    float dx = pose1.val[0][3] - pose2.val[0][3];
+    float dy = pose1.val[1][3] - pose2.val[1][3];
+    float dz = pose1.val[2][3] - pose2.val[2][3];
+    return sqrt(dx*dx+dy*dy+dz*dz);
+}
+
+// Computes the translational RMSE
+vector<std::pair<int, float> > compute_trans_rmse (vector<Matrix> &poses_gt, vector<Matrix> &poses_result, vector<pair<bool, int> > &poses_saved) {
+
+    // error vector
+    vector<std::pair<int, float> > trans_rmse;
+
+    for (int32_t frame_idx=0; frame_idx < poses_gt.size(); frame_idx+= 1) {
+        // Make sure that have a stored pose for the first frame
+        // Case if not stored / doesn't exist
+        while (frame_idx < poses_result.size() && !poses_saved[frame_idx].first)
+        {
+            frame_idx++;
+        }
+
+        // Exit if there are no more poses
+        if (!(frame_idx < poses_result.size()))
+        {
+            std::cout << "NO MORE POSES!" << std::endl;
+            break;
+        }
+
+        float indiv_rmse = indiv_trans_rmse(poses_result[poses_saved[frame_idx].second], poses_gt[frame_idx]);
+
+        trans_rmse.emplace_back(frame_idx, indiv_rmse);
     }
 
-    // success
-    return true;
+    // return error vector
+    return trans_rmse;
+}
+
+void save_trans_rmse (std::vector<std::pair<int, float> > trans_rmse, string file_name) {
+
+    // open file
+    FILE *fp;
+    fp = fopen(file_name.c_str(),"w");
+
+    for (int i = 0; i < trans_rmse.size(); i++)
+    {
+        fprintf(fp,"%d %f\n",trans_rmse[i].first,trans_rmse[i].second);
+    }
+
+    // close file
+    fclose(fp);
+}
+
+void plot_trans_rmse (string dir,char* prefix) {
+
+// } (std::vector<std::pair<int, float> > trans_rmse,string dir, string file_name) {
+
+    char command[1024];
+
+    // create suffix
+    char suffix[16];
+    sprintf(suffix,"rmse");
+
+    // gnuplot file name
+    char file_name[1024]; char full_name[1024];
+    sprintf(file_name,"%s_%s.gp",prefix,suffix);
+    sprintf(full_name,"%s/%s",dir.c_str(),file_name);
+
+    // create png + eps
+    for (int32_t j=0; j<2; j++) {
+
+        // open file
+        FILE *fp = fopen(full_name,"w");
+
+        // save gnuplot instructions
+        if (j==0) {
+            fprintf(fp,"set term png size 500,250 font \"Helvetica\" 11\n");
+            fprintf(fp,"set output \"%s_%s.png\"\n",prefix,suffix);
+        } else {
+            fprintf(fp,"set term postscript eps enhanced color\n");
+            fprintf(fp,"set output \"%s_%s.eps\"\n",prefix,suffix);
+        }
+
+        // start plot at 0
+        fprintf(fp,"set size ratio 0.5\n");
+        fprintf(fp,"set yrange [0:*]\n");
+
+        // x label
+        fprintf(fp,"set xlabel \"Frame Number\"\n");
+
+        // y label
+        fprintf(fp,"set ylabel \"Translation Error [m]\"\n");
+
+        // plot error curve
+        fprintf(fp,"plot \"%s_%s.txt\" using ",prefix,suffix);
+        fprintf(fp,"($1):($2) title 'Translation RMSE'");
+        fprintf(fp," lc rgb \"#0000FF\" pt 4 w linespoints\n");
+
+        // close file
+        fclose(fp);
+
+        // run gnuplot => create png + eps
+        sprintf(command,"cd %s; gnuplot %s",dir.c_str(),file_name);
+        system(command);
+    }
+
+    // create pdf and crop
+    sprintf(command,"cd %s; ps2pdf %s_%s.eps %s_%s_large.pdf",dir.c_str(),prefix,suffix,prefix,suffix);
+    system(command);
+    sprintf(command,"cd %s; pdfcrop %s_%s_large.pdf %s_%s.pdf",dir.c_str(),prefix,suffix,prefix,suffix);
+    system(command);
+    sprintf(command,"cd %s; rm %s_%s_large.pdf",dir.c_str(),prefix,suffix);
+    system(command);
+
+
+    // // create png + eps
+    // for (int32_t j=0; j<2; j++) {
+
+    //   // open file
+    //   FILE *fp = fopen(file_name.c_str(),"w");
+
+    //   // save gnuplot instructions
+    //   if (j==0) {
+    //     fprintf(fp,"set term png size 500,250 font \"Helvetica\" 11\n");
+    //     fprintf(fp,"set output \"%s.png\"\n","rmse_png");
+    //   } else {
+    //     fprintf(fp,"set term postscript eps enhanced color\n");
+    //     fprintf(fp,"set output \"%s.eps\"\n","rmse_eps");
+    //   }
+
+    //   // start plot at 0
+    //   fprintf(fp,"set size ratio 0.5\n");
+    //   fprintf(fp,"set yrange [0:*]\n");
+
+    //   // x label
+    //   fprintf(fp,"set xlabel \"Frame Number\"\n");
+
+    //   // y label
+    //   fprintf(fp,"set ylabel \"Translation Error [%%]\"\n");
+
+    //   // plot error curve
+    //   fprintf(fp,"plot \"rmse.txt\" using ");
+    //   fprintf(fp,"($1*3.6):($2*100) title 'Translation Error'");
+    //   fprintf(fp," lc rgb \"#0000FF\" pt 4 w linespoints\n");
+
+    //   // close file
+    //   fclose(fp);
+
+    //   // run gnuplot => create png + eps
+    //   sprintf(command,"cd %s; gnuplot %s",dir.c_str(),file_name.c_str());
+    //   system(command);
+    // }
+
+    // // // create pdf and crop
+    // // sprintf(command,"cd %s; ps2pdf %s_%s.eps %s_%s_large.pdf",dir.c_str(),prefix,suffix,prefix,suffix);
+    // // system(command);
+    // // sprintf(command,"cd %s; pdfcrop %s_%s_large.pdf %s_%s.pdf",dir.c_str(),prefix,suffix,prefix,suffix);
+    // // system(command);
+    // // sprintf(command,"cd %s; rm %s_%s_large.pdf",dir.c_str(),prefix,suffix);
+    // // system(command);
 }
 
 int32_t main (int32_t argc,char *argv[]) {
 
-    // we need 2 or 4 arguments!
-    if (argc!=2 && argc!=4) {
-        cout << "Usage: ./eval_odometry result_sha [user_sha email]" << endl;
+    // Need 5 arguments
+    if (argc!=5) {
+        cout << std::endl << "Modified KITTI Odometry Evaluation Code Usage: " << std::endl << std::endl;
+        std::cout << "./eval_odometry gnd_truth_path slam_results_path saved_slam_poses_path eval_results_dir" << endl << std::endl;
+        std::cout << "where gnd_truth_path is the path to the ground truth txt file from KITTI," << std::endl;
+        std::cout << "slam_results_path is the path to the trajectory generated by the SLAM algorithm," << std::endl;
+        std::cout << "saved_slam_poses_path is the path to the file specifying which gnd truth poses to compare to and the respective idx in slam_results_path," << std::endl;
+        std::cout << "and eval_results_dir is the path to the directory to store the evaluation results." << std::endl;
         return 1;
     }
 
+    // This is arbitrary
+    int i = 6;
+
+    // file name
+    char file_name[256];
+    sprintf(file_name,"%02d.txt",i);
+
     // read arguments
-    string result_sha = argv[1];
+    std::string gnd_truth_path = argv[1];
+    std::string slam_results_path = argv[2];
+    std::string saved_poses_path = argv[3];
+    std::string eval_results_dir = argv[4];
 
-    Mail *mail;
-    if (argc==4) mail = new Mail(argv[3]);
-    else         mail = new Mail();
-    mail->msg("Thank you for participating in our evaluation!");
+    string error_path     = eval_results_dir + "/errors.txt";
+    string rmse_path     = eval_results_dir + "/rmse_6_rmse.txt";
+    string plot_traj_dir  = eval_results_dir + "/traj_plots";
+    string plot_error_dir = eval_results_dir + "/error_plots";
 
-    // run evaluation
-    bool success = eval(result_sha,mail);
-    // if (argc==4) mail->finalize(success,"odometry",result_sha,argv[2]);
-    // else         mail->finalize(success,"odometry",result_sha);
+    // create output directories
+    system(("mkdir " + plot_traj_dir).c_str());
+    system(("mkdir " + plot_error_dir).c_str());
 
-    // send mail and exit
-    delete mail;
+    // Load the saved poses
+    std::vector<std::pair<bool, int> > poses_saved = load_saved_poses(saved_poses_path);
+    std::cout << "Loading saved poses: " << std::endl;
+
+    for (int j = 0; j < poses_saved.size(); j++)
+    {
+        std::pair<bool, int> indiv_pair = poses_saved[j];
+        std::cout << "Pair " << j << ": " << indiv_pair.first << " " << indiv_pair.second << std::endl;
+    }
+
+    std::cout << "Loaded saved poses" << std::endl;
+
+    vector<Matrix> poses_gt = loadPoses(gnd_truth_path);
+    std::cout << "Loaded gt result poses" << std::endl;
+
+    vector<Matrix> poses_result = loadPoses(slam_results_path);
+    std::cout << "Loaded SLAM poses" << std::endl;
+
+    // compute sequence errors
+    vector<errors> seq_err = calcSequenceErrors(poses_gt, poses_result, poses_saved);
+    std::cout << "Done running calcSequenceErrors" << std::endl;
+
+    saveSequenceErrors(seq_err, error_path);
+    std::cout << "Saved sequence errors" << std::endl;
+
+    // save + plot bird's eye view trajectories
+    savePathPlot(poses_gt,poses_result, plot_traj_dir + "/" + file_name);
+    std::cout << "Saved path plot" << std::endl;
+
+    vector<int32_t> roi = computeRoi(poses_gt,poses_result);
+    std::cout << "Finished computeRoi" << std::endl;
+
+    plotPathPlot(plot_traj_dir,roi,i);
+    std::cout << "Finished path plot" << std::endl;
+
+    // save + plot individual errors
+    char prefix[16];
+    sprintf(prefix,"%02d",i);
+    saveErrorPlots(seq_err,plot_error_dir,prefix);
+    std::cout << "Finished saveErrorPlots" << std::endl;
+
+    plotErrorPlots(plot_error_dir,prefix);
+    std::cout << "Finished plotErrorPlots" << std::endl;
+
+    // save + plot errors for each length over trajectory
+    char prefix2[16];
+    sprintf(prefix2,"%02d_length",i);
+    saveLengthErrorPlots(seq_err,plot_error_dir,prefix2);
+    std::cout << "Finished saveLengthErrorPlots" << std::endl;
+
+    plotLengthErrorPlots(plot_error_dir,prefix2);
+    std::cout << "Finished plotLengthErrorPlots" << std::endl;
+
+    // Computing translational error frame by frame
+    std::vector<std::pair<int, float> > trans_rmse = compute_trans_rmse(poses_gt, poses_result, poses_saved);
+    std::cout << "Done computing translational RMSE" << std::endl;
+
+    char prefix3[16];
+    string rmse = "rmse";
+    sprintf(prefix3,"rmse_%d",i);
+
+    save_trans_rmse(trans_rmse, rmse_path);
+    std::cout << "Finished saving translational RMSE" << std::endl;
+
+    plot_trans_rmse(eval_results_dir, prefix3);
+    std::cout << "Finished saving translational RMSE plots" << std::endl;
+
     return 0;
 }
-

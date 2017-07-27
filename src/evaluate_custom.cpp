@@ -124,7 +124,7 @@ vector<errors> calcSequenceErrors (vector<Matrix> &poses_gt,vector<Matrix> &pose
             float t_err = translationError(pose_error);
 
             // compute speed
-            float num_frames = (float)(last_frame-first_frame+1);
+            auto num_frames = (float)(last_frame-first_frame+1);
             float speed = len/(0.1*num_frames);
 
             // write to file
