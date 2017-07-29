@@ -11,16 +11,23 @@
 #include "mail.h"
 #include "matrix.h"
 #include <map>
+#include <gflags/gflags.h>
 
 using namespace std;
 
 // static parameter
+DEFINE_int32(num, 1, "number of evaluation");
+DEFINE_string(prefix, "test", "name prefix of groundtruth and slam pose file");
+DEFINE_double(offset, 0, "offset during alignment of two files");
+DEFINE_double(maxdiff, 0.02, "maximum value difference between aligned frames");
+
 // float lengths[] = {5,10,50,100,150,200,250,300,350,400};
 float lengths[] = {100,200,300,400,500,600,700,800};
 int32_t num_lengths = 8;
 
 typedef map<double, Matrix> posemap;
-typedef map<Matrix, Matrix> posepair;
+typedef vector<pair<Matrix, Matrix>> posepair;
+vector<Matrix> poses_gt, poses_result;
 
 std::string getexepath()
 {
@@ -29,9 +36,10 @@ std::string getexepath()
     return std::string( result, (count > 0) ? count : 0 );
 }
 
-posepair associate(posemap gt, posemap est, double offset, double max_difference){
-    posepair matches;
-
+void associate(posemap gt, posemap est, double offset, double max_difference){
+//    posepair matches;
+    poses_gt.clear();
+    poses_result.clear();
     map<double, array<Matrix, 2>> potential_matches;
 //    vector<pair<double, array<Matrix,2>>> potential_matches;
 
@@ -50,9 +58,11 @@ posepair associate(posemap gt, posemap est, double offset, double max_difference
     }
 //        std::sort(potential_matches.begin(), potential_matches.end()); // no need to sort map by its key
     for (auto it = potential_matches.begin(); it != potential_matches.end(); ++it){
-        matches.insert(make_pair(it->second[0],it->second[1]));
+//        matches.insert(make_pair(it->second[0],it->second[1]));
+        poses_gt.push_back(it->second[0]);
+        poses_result.push_back(it->second[1]);
+//        matches.emplace_back(it->second[0], it->second[1]);
     }
-
 }
 
 struct errors {
@@ -104,12 +114,12 @@ vector<Matrix> loadPoses(string file_name) {
     return poses;
 }
 
-vector<double> trajectoryDistances_t (posemap &poses) {
-    vector<double> dist;
+vector<float> trajectoryDistances_t (posepair &poses) {
+    vector<float> dist;
     dist.push_back(0);
     for (int32_t i=1; i<poses.size(); i++) {
-        Matrix P1 = poses[i-1];
-        Matrix P2 = poses[i];
+        Matrix P1 = poses[i-1].first;
+        Matrix P2 = poses[i].first;
         double dx = P1.val[0][3]-P2.val[0][3];
         double dy = P1.val[1][3]-P2.val[1][3];
         double dz = P1.val[2][3]-P2.val[2][3];
@@ -155,7 +165,7 @@ inline float translationError(Matrix &pose_error) {
     return sqrt(dx*dx+dy*dy+dz*dz);
 }
 
-vector<errors> calSequenceError_t (posepair &pose_pairs, posemap &poses_gt,posemap &poses_result) {
+vector<errors> calSequenceError_t (posepair &pose_pairs) {
 
     // error vector
     vector<errors> err;
@@ -164,10 +174,10 @@ vector<errors> calSequenceError_t (posepair &pose_pairs, posemap &poses_gt,posem
     int32_t step_size = 10; // every second
 
     // pre-compute distances (from ground truth as reference)
-    vector<float> dist = trajectoryDistances(poses_gt);
+    vector<float> dist = trajectoryDistances_t(pose_pairs);
 
     // for all start positions do
-    for (int32_t first_frame=0; first_frame<poses_gt.size(); first_frame+=step_size) {
+    for (int32_t first_frame=0; first_frame<pose_pairs.size(); first_frame+=step_size) {
 
         // for all segment lengths do
         for (int32_t i=0; i<num_lengths; i++) {
@@ -183,8 +193,8 @@ vector<errors> calSequenceError_t (posepair &pose_pairs, posemap &poses_gt,posem
                 continue;
 
             // compute rotational and translational errors
-            Matrix pose_delta_gt     = Matrix::inv(poses_gt[first_frame])*poses_gt[last_frame];
-            Matrix pose_delta_result = Matrix::inv(poses_result[first_frame])*poses_result[last_frame];
+            Matrix pose_delta_gt     = Matrix::inv(pose_pairs[first_frame].first)*pose_pairs[last_frame].first;
+            Matrix pose_delta_result = Matrix::inv(pose_pairs[first_frame].second)*pose_pairs[last_frame].second;
             Matrix pose_error        = Matrix::inv(pose_delta_result)*pose_delta_gt;
             float r_err = rotationError(pose_error);
             float t_err = translationError(pose_error);
@@ -529,14 +539,14 @@ void saveStats (vector<errors> err,string dir) {
     fclose(fp);
 }
 
-bool eval (string result_sha, int num_test ,Mail* mail) {
+bool eval (Mail* mail) {
 
     string work_dir_build = getexepath();
     string work_dir = work_dir_build.substr(0, work_dir_build.find("cmake-build"));
     cout << "current working dir is: " << work_dir << endl;
     // ground truth and result directories
-    string gt_dir         = work_dir + "eval_data/gt";
-    string result_dir     = work_dir + "eval_data/results/" + result_sha;
+    string gt_dir         = work_dir + "eval_data/gt";  //ground truth trajectory file, named 01.txt, 02.txt ...
+    string result_dir     = work_dir + "eval_data/results/";   //results.txt
     string error_dir      = result_dir + "/errors";
     string plot_path_dir  = result_dir + "/plot_path";
     string plot_error_dir = result_dir + "/plot_error";
@@ -550,54 +560,52 @@ bool eval (string result_sha, int num_test ,Mail* mail) {
     vector<errors> total_err;
 
     // for all sequences do
-    for (int32_t i = 1; i < num_test + 1; i++) {
+    for (int32_t i = 1; i < FLAGS_num + 1; i++) {
 
         // file name
         char file_name[64];
-        sprintf(file_name,"%02d.txt",i);
+        sprintf(file_name,"%s%02d.txt",FLAGS_prefix.c_str(),i);
 
         // read ground truth and result poses
-        vector<Matrix> poses_gt_p     = loadPoses(gt_dir + "/" + file_name);
-        vector<Matrix> poses_result_p = loadPoses(result_dir + "/data/" + file_name);
+//        vector<Matrix> poses_gt_p     = loadPoses(gt_dir + "/" + file_name);
+//        vector<Matrix> poses_result_p = loadPoses(result_dir + "/data/" + file_name);
 
-        posemap poses_gt = loadPoses_map(gt_dir + "/" + file_name);
+        posemap poses_gt_p = loadPoses_map(gt_dir + "/" + file_name);
         std::cout << "Loaded gt result poses" << std::endl;
 
-        posemap poses_result = loadPoses_map(result_dir + "/data/" + file_name);
+        posemap poses_result_p = loadPoses_map(result_dir + "/data/" + file_name);
         std::cout << "Loaded SLAM poses" << std::endl;
 
-        posepair pose_pairs = associate(poses_gt, poses_result, 0, 0.02);
+        associate(poses_gt_p, poses_result_p, FLAGS_offset, FLAGS_maxdiff);
 
         // plot status
-        mail->msg("Processing: %s, pairs: %d | poses: %d/%d",file_name, pose_pairs.size(), poses_result_p.size(), poses_gt_p.size());
+        mail->msg("Processing: %s, poses: %d/%d",file_name, poses_result_p.size(), poses_gt_p.size());
 
         // check for errors
-        if (poses_gt.empty() || pose_pairs.empty()) {
+        if (poses_gt.empty() || poses_result.size()!=poses_gt.size()) {
             mail->msg("ERROR: Couldn't read (all) poses of: %s", file_name);
             return false;
         }
 
         // compute sequence errors
+//        vector<errors> seq_err = trajectoryDistances_t(pose_pairs);
         vector<errors> seq_err = calcSequenceErrors(poses_gt,poses_result);
+//        vector<errors> seq_err = calSequenceError_t(pose_pairs);
         saveSequenceErrors(seq_err,error_dir + "/" + file_name);
 
         // add to total errors
         total_err.insert(total_err.end(),seq_err.begin(),seq_err.end());
 
-        // for first half => plot trajectory and compute individual stats
-        if (i<=15) {
+        // save + plot bird's eye view trajectories
+        savePathPlot(poses_gt,poses_result,plot_path_dir + "/" + file_name);
+        vector<int32_t> roi = computeRoi(poses_gt,poses_result);
+        plotPathPlot(plot_path_dir,roi,i);
 
-            // save + plot bird's eye view trajectories
-            savePathPlot(poses_gt_p,poses_result_p,plot_path_dir + "/" + file_name);
-            vector<int32_t> roi = computeRoi(poses_gt_p,poses_result_p);
-            plotPathPlot(plot_path_dir,roi,i);
-
-            // save + plot individual errors
-            char prefix[16];
-            sprintf(prefix,"%02d",i);
-            saveErrorPlots(seq_err,plot_error_dir,prefix);
-            plotErrorPlots(plot_error_dir,prefix);
-        }
+        // save + plot individual errors
+        char prefix[16];
+        sprintf(prefix,"%02d",i);
+        saveErrorPlots(seq_err,plot_error_dir,prefix);
+        plotErrorPlots(plot_error_dir,prefix);
     }
 
     // save + plot total errors + summary statistics
@@ -615,23 +623,18 @@ bool eval (string result_sha, int num_test ,Mail* mail) {
 
 int32_t main (int32_t argc,char *argv[]) {
 
-    // we need 2 or 4 arguments!
-    if (argc!=3) {
-        cout << "Usage: ./eval_odometry result_sha num_test" << endl;
-        return 1;
-    }
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-    // read arguments
-    string result_sha = argv[1];
-    int num_test = atoi(argv[2]);
+    cout << "Usage: ./eval_odometry [optional: -num=1 -prefix=try1 -offset=0 -maxdiff=0.02]" << endl;
 
     Mail *mail;
     mail = new Mail();
     mail->msg("Customized visual odometry evaluation.");
 
     // run evaluation
-    eval(result_sha,num_test, mail);
+    eval(mail);
 
     delete mail;
+    gflags::ShutDownCommandLineFlags();
     return 0;
 }
