@@ -32,8 +32,8 @@
 *.app
 .idea/
 build/
+cmake-build/
 cmake-build-debug/
 bag/
 # data/
-results/
-eval_data/
+# eval_data/

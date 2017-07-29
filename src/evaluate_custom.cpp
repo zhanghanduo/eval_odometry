@@ -273,7 +273,7 @@ void saveSequenceErrors (vector<errors> &err,string file_name) {
     fclose(fp);
 }
 
-void savePathPlot (vector<Matrix> &poses_gt,vector<Matrix> &poses_result,string file_name) {
+void savePathPlot (vector<Matrix> &poses_gt,vector<Matrix> &poses_result, const string &file_name) {
 
     // parameters
     int32_t step_size = 3;
@@ -564,8 +564,8 @@ bool eval (Mail* mail) {
 
         // file name
         char file_name[64];
-        sprintf(file_name,"%s%02d.txt",FLAGS_prefix.c_str(),i);
-
+//        sprintf(file_name,"%s%02d.txt",FLAGS_prefix.c_str(),i);
+        sprintf(file_name,"%02d.txt",i);
         // read ground truth and result poses
 //        vector<Matrix> poses_gt_p     = loadPoses(gt_dir + "/" + file_name);
 //        vector<Matrix> poses_result_p = loadPoses(result_dir + "/data/" + file_name);
@@ -579,7 +579,7 @@ bool eval (Mail* mail) {
         associate(poses_gt_p, poses_result_p, FLAGS_offset, FLAGS_maxdiff);
 
         // plot status
-        mail->msg("Processing: %s, poses: %d/%d",file_name, poses_result_p.size(), poses_gt_p.size());
+        mail->msg("Processing: %s, poses: %d/%d",file_name, poses_result.size(), poses_gt.size());
 
         // check for errors
         if (poses_gt.empty() || poses_result.size()!=poses_gt.size()) {
@@ -598,6 +598,8 @@ bool eval (Mail* mail) {
 
         // save + plot bird's eye view trajectories
         savePathPlot(poses_gt,poses_result,plot_path_dir + "/" + file_name);
+        cout << "so far so good 1" << endl;
+
         vector<int32_t> roi = computeRoi(poses_gt,poses_result);
         plotPathPlot(plot_path_dir,roi,i);
 
