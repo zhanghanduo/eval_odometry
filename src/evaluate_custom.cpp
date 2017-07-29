@@ -10,6 +10,7 @@
 #include <string.h>
 #include "mail.h"
 #include "matrix.h"
+#include <map>
 
 using namespace std;
 
@@ -18,13 +19,40 @@ using namespace std;
 float lengths[] = {100,200,300,400,500,600,700,800};
 int32_t num_lengths = 8;
 
-
+typedef map<double, Matrix> posemap;
+typedef map<Matrix, Matrix> posepair;
 
 std::string getexepath()
 {
     char result[ 256 ];
     ssize_t count = readlink( "/proc/self/exe", result, 256 );
     return std::string( result, (count > 0) ? count : 0 );
+}
+
+posepair associate(posemap gt, posemap est, double offset, double max_difference){
+    posepair matches;
+
+    map<double, array<Matrix, 2>> potential_matches;
+//    vector<pair<double, array<Matrix,2>>> potential_matches;
+
+    for (auto git = gt.begin(); git != gt.end(); ++git){
+        for (auto eit = est.begin(); eit != est.end(); ++eit){
+            double value;
+            value = fabs(git->first - (eit->first + offset));
+            if(value < max_difference) {
+//                array<Matrix,2> tempMatrix_array;
+//                tempMatrix_array[0] = git->second;
+//                tempMatrix_array[1] = eit->second;
+//                potential_matches.push_back(make_pair(value, tempMatrix_array));
+                potential_matches[value] = {git->second, eit->second};
+            }
+        }
+    }
+//        std::sort(potential_matches.begin(), potential_matches.end()); // no need to sort map by its key
+    for (auto it = potential_matches.begin(); it != potential_matches.end(); ++it){
+        matches.insert(make_pair(it->second[0],it->second[1]));
+    }
+
 }
 
 struct errors {
@@ -36,6 +64,27 @@ struct errors {
     errors (int32_t first_frame,float r_err,float t_err,float len,float speed) :
             first_frame(first_frame),r_err(r_err),t_err(t_err),len(len),speed(speed) {}
 };
+
+
+posemap loadPoses_map(string file_name){
+    posemap poses;
+    FILE *fp = fopen(file_name.c_str(),"r");
+    if (fp == nullptr)
+        return poses;
+    while (feof(fp) == 0) {
+        Matrix P = Matrix::eye(4);
+        double t;
+        if (fscanf(fp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", &t,
+                   &P.val[0][0], &P.val[0][1], &P.val[0][2], &P.val[0][3],
+                   &P.val[1][0], &P.val[1][1], &P.val[1][2], &P.val[1][3],
+                   &P.val[2][0], &P.val[2][1], &P.val[2][2], &P.val[2][3] )==13) {
+            poses[t] = P;
+        }
+    }
+    fclose(fp);
+    return poses;
+};
+
 
 vector<Matrix> loadPoses(string file_name) {
     vector<Matrix> poses;
@@ -54,6 +103,21 @@ vector<Matrix> loadPoses(string file_name) {
     fclose(fp);
     return poses;
 }
+
+vector<double> trajectoryDistances_t (posemap &poses) {
+    vector<double> dist;
+    dist.push_back(0);
+    for (int32_t i=1; i<poses.size(); i++) {
+        Matrix P1 = poses[i-1];
+        Matrix P2 = poses[i];
+        double dx = P1.val[0][3]-P2.val[0][3];
+        double dy = P1.val[1][3]-P2.val[1][3];
+        double dz = P1.val[2][3]-P2.val[2][3];
+        dist.push_back(dist[i-1]+sqrt(dx*dx+dy*dy+dz*dz));
+    }
+    return dist;
+}
+
 
 vector<float> trajectoryDistances (vector<Matrix> &poses) {
     vector<float> dist;
@@ -89,6 +153,53 @@ inline float translationError(Matrix &pose_error) {
     float dy = pose_error.val[1][3];
     float dz = pose_error.val[2][3];
     return sqrt(dx*dx+dy*dy+dz*dz);
+}
+
+vector<errors> calSequenceError_t (posepair &pose_pairs, posemap &poses_gt,posemap &poses_result) {
+
+    // error vector
+    vector<errors> err;
+
+    // parameters
+    int32_t step_size = 10; // every second
+
+    // pre-compute distances (from ground truth as reference)
+    vector<float> dist = trajectoryDistances(poses_gt);
+
+    // for all start positions do
+    for (int32_t first_frame=0; first_frame<poses_gt.size(); first_frame+=step_size) {
+
+        // for all segment lengths do
+        for (int32_t i=0; i<num_lengths; i++) {
+
+            // current length
+            float len = lengths[i];
+
+            // compute last frame
+            int32_t last_frame = lastFrameFromSegmentLength(dist,first_frame,len);
+
+            // continue, if sequence not long enough
+            if (last_frame==-1)
+                continue;
+
+            // compute rotational and translational errors
+            Matrix pose_delta_gt     = Matrix::inv(poses_gt[first_frame])*poses_gt[last_frame];
+            Matrix pose_delta_result = Matrix::inv(poses_result[first_frame])*poses_result[last_frame];
+            Matrix pose_error        = Matrix::inv(pose_delta_result)*pose_delta_gt;
+            float r_err = rotationError(pose_error);
+            float t_err = translationError(pose_error);
+
+            // compute speed
+            auto num_frames = (float)(last_frame-first_frame+1);
+            float speed = len/(0.1*num_frames);
+
+            // write to file
+            err.push_back(errors(first_frame,r_err/len,t_err/len,len,speed));
+        }
+    }
+
+    // return error vector
+    return err;
 }
 
 vector<errors> calcSequenceErrors (vector<Matrix> &poses_gt,vector<Matrix> &poses_result) {
@@ -442,18 +553,26 @@ bool eval (string result_sha, int num_test ,Mail* mail) {
     for (int32_t i = 1; i < num_test + 1; i++) {
 
         // file name
-        char file_name[256];
+        char file_name[64];
         sprintf(file_name,"%02d.txt",i);
 
         // read ground truth and result poses
-        vector<Matrix> poses_gt     = loadPoses(gt_dir + "/" + file_name);
-        vector<Matrix> poses_result = loadPoses(result_dir + "/data/" + file_name);
+        vector<Matrix> poses_gt_p     = loadPoses(gt_dir + "/" + file_name);
+        vector<Matrix> poses_result_p = loadPoses(result_dir + "/data/" + file_name);
+
+        posemap poses_gt = loadPoses_map(gt_dir + "/" + file_name);
+        std::cout << "Loaded gt result poses" << std::endl;
+
+        posemap poses_result = loadPoses_map(result_dir + "/data/" + file_name);
+        std::cout << "Loaded SLAM poses" << std::endl;
+
+        posepair pose_pairs = associate(poses_gt, poses_result, 0, 0.02);
 
         // plot status
-        mail->msg("Processing: %s, poses: %d/%d",file_name,poses_result.size(),poses_gt.size());
+        mail->msg("Processing: %s, pairs: %d | poses: %d/%d",file_name, pose_pairs.size(), poses_result_p.size(), poses_gt_p.size());
 
         // check for errors
-        if (poses_gt.size()==0 || poses_result.size()!=poses_gt.size()) {
+        if (poses_gt.empty() || pose_pairs.empty()) {
             mail->msg("ERROR: Couldn't read (all) poses of: %s", file_name);
             return false;
         }
@@ -469,8 +588,8 @@ bool eval (string result_sha, int num_test ,Mail* mail) {
         if (i<=15) {
 
             // save + plot bird's eye view trajectories
-            savePathPlot(poses_gt,poses_result,plot_path_dir + "/" + file_name);
-            vector<int32_t> roi = computeRoi(poses_gt,poses_result);
+            savePathPlot(poses_gt_p,poses_result_p,plot_path_dir + "/" + file_name);
+            vector<int32_t> roi = computeRoi(poses_gt_p,poses_result_p);
             plotPathPlot(plot_path_dir,roi,i);
 
             // save + plot individual errors

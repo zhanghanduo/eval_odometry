@@ -4,8 +4,7 @@
 #include <vector>
 #include <limits>
 #include <fstream>
-#include <map>
-#include <algorithm>
+
 #include "mail.h"
 #include "matrix.h"
 
@@ -15,13 +14,6 @@ using namespace std;
 // float lengths[] = {5,10,50,100,150,200,250,300,350,400};
 float lengths[] = {100,200,300,400,500,600,700,800};
 int32_t num_lengths = 8;
-struct pos {
-    double timestamp;
-    Matrix M;
-};
-
-typedef map<double, Matrix> posemap;
-typedef map<Matrix, Matrix> posepair;
 
 struct errors {
     int32_t first_frame;
@@ -33,71 +25,24 @@ struct errors {
             first_frame(first_frame),r_err(r_err),t_err(t_err),len(len),speed(speed) {}
 };
 
-posepair associate(posemap gt, posemap est, double offset, double max_difference){
-    posepair matches;
-    map<double, array<Matrix, 2>> potential_matches;
-
-//    for (auto &git : gt_keys){
-//        for (auto &eit : est_keys){
-//            double value,aa,bb;
-//            aa = *git;
-//            value = abs(*git - (*eit + offset));
-//        }
-//    }
-    for (auto git = gt.begin(); git != gt.end(); ++git){
-        for (auto eit = est.begin(); eit != est.end(); ++eit){
-            double value;
-            value = fabs(git->first - (eit->first + offset));
-            if(value < max_difference) {
-                potential_matches[value] = {git->second, eit->second};
-            }
-        }
-    }
-//        std::sort(potential_matches.begin(), potential_matches.end()); // no need to sort map by its key
-    for (auto it = potential_matches.begin(); it != potential_matches.end(); ++it){
-        matches.insert(make_pair(it->second[0],it->second[1]));
-    }
-
-}
-
 // Load poses from file into a vector
-vector<pos> loadPoses(string file_name) {
-    vector<pos> poses;
+vector<Matrix> loadPoses(string file_name) {
+    vector<Matrix> poses;
     FILE *fp = fopen(file_name.c_str(),"r");
     if (!fp)
         return poses;
     while (!feof(fp)) {
-        pos P;
-        P.M.eye(4);
-        if (fscanf(fp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", &P.timestamp,
-                   &P.M.val[0][0], &P.M.val[0][1], &P.M.val[0][2], &P.M.val[0][3],
-                   &P.M.val[1][0], &P.M.val[1][1], &P.M.val[1][2], &P.M.val[1][3],
-                   &P.M.val[2][0], &P.M.val[2][1], &P.M.val[2][2], &P.M.val[2][3] )==13) {
+        Matrix P = Matrix::eye(4);
+        if (fscanf(fp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
+                   &P.val[0][0], &P.val[0][1], &P.val[0][2], &P.val[0][3],
+                   &P.val[1][0], &P.val[1][1], &P.val[1][2], &P.val[1][3],
+                   &P.val[2][0], &P.val[2][1], &P.val[2][2], &P.val[2][3] )==12) {
             poses.push_back(P);
         }
     }
     fclose(fp);
     return poses;
 }
-
-posemap loadPoses_map(string file_name){
-    posemap poses;
-    FILE *fp = fopen(file_name.c_str(),"r");
-    if (fp == nullptr)
-        return poses;
-    while (feof(fp) == 0) {
-        Matrix P = Matrix::eye(4);
-        double t;
-        if (fscanf(fp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", &t,
-                   &P.val[0][0], &P.val[0][1], &P.val[0][2], &P.val[0][3],
-                   &P.val[1][0], &P.val[1][1], &P.val[1][2], &P.val[1][3],
-                   &P.val[2][0], &P.val[2][1], &P.val[2][2], &P.val[2][3] )==13) {
-            poses[t] = P;
-        }
-    }
-    fclose(fp);
-    return poses;
-};
 
 // Compute distances from the starting pose
 vector<float> trajectoryDistances (vector<Matrix> &poses) {
@@ -114,7 +59,7 @@ vector<float> trajectoryDistances (vector<Matrix> &poses) {
     return dist;
 }
 
-// Finds a frame that is 
+// Finds a frame that is
 int32_t lastFrameFromSegmentLength(vector<float> &dist,int32_t first_frame,float len, vector<pair<bool, int> > &poses_saved) {
     for (int32_t i=first_frame; i<dist.size(); i++)
         // If the pose is far away enough
@@ -145,7 +90,7 @@ inline float translationError(Matrix &pose_error) {
     return sqrt(dx*dx+dy*dy+dz*dz);
 }
 
-// Computes the 
+// Computes the
 vector<errors> calcSequenceErrors (vector<Matrix> &poses_gt, vector<Matrix> &poses_result, vector<pair<bool, int> > &poses_saved) {
 
     // error vector
@@ -168,7 +113,7 @@ vector<errors> calcSequenceErrors (vector<Matrix> &poses_gt, vector<Matrix> &pos
         }
 
         // Exit if there are no more poses
-        if (first_frame >= poses_result.size())
+        if (!(first_frame < poses_result.size()))
         {
             std::cout << "NO MORE POSES!" << std::endl;
             break;
@@ -840,13 +785,11 @@ int32_t main (int32_t argc,char *argv[]) {
 
     std::cout << "Loaded saved poses" << std::endl;
 
-    vector<pos> poses_gt = loadPoses(gnd_truth_path);
+    vector<Matrix> poses_gt = loadPoses(gnd_truth_path);
     std::cout << "Loaded gt result poses" << std::endl;
 
-    vector<pos> poses_result = loadPoses(slam_results_path);
+    vector<Matrix> poses_result = loadPoses(slam_results_path);
     std::cout << "Loaded SLAM poses" << std::endl;
-
-
 
     // compute sequence errors
     vector<errors> seq_err = calcSequenceErrors(poses_gt, poses_result, poses_saved);
