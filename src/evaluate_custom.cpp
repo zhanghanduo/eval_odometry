@@ -24,9 +24,10 @@ DEFINE_double(offset, 0, "offset during alignment of two files");
 DEFINE_double(maxdiff, 0.03, "maximum value difference between aligned frames");
 DEFINE_double(inithead, 120, "initial heading with reference to North");
 
-// float lengths[] = {5,10,50,100,150,200,250,300,350,400};
-float lengths[] = {100,200,300,400,500,600,700,800};
-int32_t num_lengths = 8;
+//float lengths[] = {100,200,300,400,500,600,700,800};
+float lengths[] = {200,400,600,800,1000,1200,1400,1600,1800,2000,2200,2400,2600,2800,3000,3200,3400,3600,3800,4000,4200};
+
+int32_t num_lengths = 21;
 
 typedef map<long double, Matrix> posemap;
 typedef vector<pair<Matrix, Matrix>> posepair;
@@ -141,7 +142,6 @@ posemap loadPoses_est(string file_name){
             poses[t] = Q;
         }
     }
-    cout << sin(90.0) << " and radian: " << sin(PI / 2) << endl;
     fclose(fp);
     cout << "Program has loaded: " << poses.size() << " frames." << endl;
     return poses;
@@ -240,14 +240,14 @@ vector<errors> calSequenceError_t () {
         double time_diff = poses_gt_a[first_frame] - poses_gt_a[last_frame];
         double speed = dist[first_frame]/time_diff;
         // write to file
-        err.push_back(errors(first_frame,r_err/100,t_err/100,100,speed));
+        err.emplace_back(first_frame,r_err,t_err,100,(float)speed);
     }
 
     // return error vector
     return err;
 }
 
-vector<errors> calcSequenceErrors (vector<Matrix> &poses_gt,vector<Matrix> &poses_result) {
+vector<errors> calcSequenceErrors () {
 
     // error vector
     vector<errors> err;
@@ -259,7 +259,7 @@ vector<errors> calcSequenceErrors (vector<Matrix> &poses_gt,vector<Matrix> &pose
     vector<float> dist = trajectoryDistances(poses_gt);
 
     // for all start positions do
-    for (int32_t first_frame=0; first_frame<poses_gt.size(); ++ first_frame) {
+    for (int32_t first_frame=0; first_frame<poses_gt.size(); first_frame+=step_size) {
 
         // for all segment lengths do
         for (int32_t i=0; i<num_lengths; i++) {
@@ -282,11 +282,11 @@ vector<errors> calcSequenceErrors (vector<Matrix> &poses_gt,vector<Matrix> &pose
             float t_err = translationError(pose_error);
 
             // compute speed
-            auto num_frames = (float)(last_frame-first_frame+1);
-            float speed = len/(0.1*num_frames);
+            auto num_frames = last_frame-first_frame+1;
+            double speed = len/(0.1*num_frames);
 
             // write to file
-            err.push_back(errors(first_frame,r_err/len,t_err/len,len,speed));
+            err.emplace_back(first_frame,r_err/len,t_err/len,len,speed);
         }
     }
 
@@ -623,8 +623,8 @@ bool eval (Mail* mail) {
         }
 
         // compute sequence errors
-//        vector<errors> seq_err = calcSequenceErrors(poses_gt,poses_result);
-        vector<errors> seq_err = calSequenceError_t();
+        vector<errors> seq_err = calcSequenceErrors();
+//        vector<errors> seq_err = calSequenceError_t();
         saveSequenceErrors(seq_err,error_dir + "/" + file_name);
 
         // add to total errors
