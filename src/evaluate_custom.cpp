@@ -19,7 +19,7 @@ using namespace std;
 
 // static parameter
 DEFINE_int32(num, 1, "number of evaluation");
-DEFINE_string(prefix, "test", "name prefix of groundtruth and slam pose file");
+DEFINE_string(prefix, "", "name prefix of groundtruth and slam pose file");
 DEFINE_double(offset, 0, "offset during alignment of two files");
 DEFINE_double(maxdiff, 0.03, "maximum value difference between aligned frames");
 DEFINE_double(inithead, 120, "initial heading with reference to North");

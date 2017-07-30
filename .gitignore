@@ -34,9 +34,10 @@
 build/
 cmake-build/
 cmake-build-debug/
+errors/
+plot_error/
+plot_path/
+stats.txt
 bag/
 # data/
-eval_data/errors/
-eval_data/plot_error/
-eval_data/plot_path/
-eval_data/*.txt
+
