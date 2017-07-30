@@ -2,25 +2,27 @@
 // Created by zh on 12/7/17.
 //
 #include <iostream>
-#include <stdio.h>
-#include <math.h>
+#include <cstdio>
+#include <cmath>
 #include <vector>
 #include <limits>
 #include <unistd.h>
-#include <string.h>
 #include "mail.h"
 #include "matrix.h"
 #include <map>
 #include <iomanip>
+#include <dirent.h>
 #include <gflags/gflags.h>
 
 using namespace std;
+#define PI 3.14159265359
 
 // static parameter
 DEFINE_int32(num, 1, "number of evaluation");
 DEFINE_string(prefix, "test", "name prefix of groundtruth and slam pose file");
 DEFINE_double(offset, 0, "offset during alignment of two files");
 DEFINE_double(maxdiff, 0.03, "maximum value difference between aligned frames");
+DEFINE_double(inithead, 120, "initial heading with reference to North");
 
 // float lengths[] = {5,10,50,100,150,200,250,300,350,400};
 float lengths[] = {100,200,300,400,500,600,700,800};
@@ -79,22 +81,67 @@ struct errors {
             first_frame(first_frame),r_err(r_err),t_err(t_err),len(len),speed(speed) {}
 };
 
-
-posemap loadPoses_map(string file_name){
+posemap loadPoses_gt(string file_name){
     posemap poses;
     FILE *fp = fopen(file_name.c_str(),"r");
     if (fp == nullptr)
         return poses;
     while (feof(fp) == 0) {
         Matrix P = Matrix::eye(4);
+        double x,y,z, cosPhi, sinPhi, cosLambda, sinLambda, tt, uEast, wUp, vNorth;
+        long double t;
+        if (fscanf(fp, "%Lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", &t,
+                   &P.val[0][0], &P.val[0][1], &P.val[0][2], &x,
+                   &P.val[1][0], &P.val[1][1], &P.val[1][2], &y,
+                   &P.val[2][0], &P.val[2][1], &P.val[2][2], &z )==13) {
+            /******** GPS ecef to local enu coordinate ************/
+            cosPhi = cos(1.342086 * PI/180);
+            sinPhi = sin(1.342086 * PI/180);
+            cosLambda = cos(103.680818 * PI/180);
+            sinLambda = sin(103.680818 * PI/180);
+            tt = cosLambda * x + sinLambda * y;
+            uEast = - sinLambda * x + cosLambda * y;
+            wUp = cosPhi * tt + sinPhi * z;
+            vNorth = - sinPhi * tt + cosPhi * z;
+            P.val[0][3] = -wUp;
+            P.val[1][3] = vNorth;
+            P.val[2][3] = -uEast;
+            /******** GPS ecef to local enu coordinate ************/
+            poses[t] = P;
+        }
+    }
+    fclose(fp);
+    cout << "Ground truth has loaded: " << poses.size() << " frames." << endl;
+    return poses;
+};
+
+posemap loadPoses_est(string file_name){
+    posemap poses;
+    FILE *fp = fopen(file_name.c_str(),"r");
+    if (fp == nullptr)
+        return poses;
+    while (feof(fp) == 0) {
+        Matrix P = Matrix::eye(4);
+        Matrix Q = Matrix::eye(4);
+        Matrix Rot = Matrix::eye(4);
         long double t;
         if (fscanf(fp, "%Lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", &t,
                    &P.val[0][0], &P.val[0][1], &P.val[0][2], &P.val[0][3],
                    &P.val[1][0], &P.val[1][1], &P.val[1][2], &P.val[1][3],
                    &P.val[2][0], &P.val[2][1], &P.val[2][2], &P.val[2][3] )==13) {
-            poses[t] = P;
+
+            FLOAT s = sin(FLAGS_inithead * PI / 180);
+            FLOAT c = cos(FLAGS_inithead * PI / 180);
+            Rot.val[0][0] = c;
+            Rot.val[0][2] = s;
+            Rot.val[2][0] = -s;
+            Rot.val[2][2] = c;
+
+            Q = Rot * P;
+            poses[t] = Q;
         }
     }
+    cout << sin(90.0) << " and radian: " << sin(PI / 2) << endl;
     fclose(fp);
     cout << "Program has loaded: " << poses.size() << " frames." << endl;
     return poses;
@@ -540,9 +587,12 @@ bool eval (Mail* mail) {
     string plot_error_dir = result_dir + "/plot_error";
 
     // create output directories
-    system(("mkdir " + error_dir).c_str());
-    system(("mkdir " + plot_path_dir).c_str());
-    system(("mkdir " + plot_error_dir).c_str());
+    if (nullptr == opendir(error_dir.c_str()))
+        system(("mkdir " + error_dir).c_str());
+    if (nullptr == opendir(plot_path_dir.c_str()))
+        system(("mkdir " + plot_path_dir).c_str());
+    if (nullptr == opendir(plot_error_dir.c_str()))
+        system(("mkdir " + plot_error_dir).c_str());
 
     // total errors
     vector<errors> total_err;
@@ -555,10 +605,10 @@ bool eval (Mail* mail) {
 //        sprintf(file_name,"%s%02d.txt",FLAGS_prefix.c_str(),i);
         sprintf(file_name,"%02d.txt",i);
         // read ground truth and result poses
-        posemap poses_gt_p = loadPoses_map(gt_dir + "/" + file_name);
+        posemap poses_gt_p = loadPoses_gt(gt_dir + "/" + file_name);
         std::cout << "Loaded gt result poses" << std::endl;
 
-        posemap poses_result_p = loadPoses_map(result_dir + "/data/" + file_name);
+        posemap poses_result_p = loadPoses_est(result_dir + "/data/" + file_name);
         std::cout << "Loaded SLAM poses" << std::endl;
 
         associate(poses_gt_p, poses_result_p, FLAGS_offset, FLAGS_maxdiff);
@@ -610,7 +660,7 @@ int32_t main (int32_t argc,char *argv[]) {
 
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-    cout << "Usage: ./eval_odometry [optional: -num=1 -prefix=try1 -offset=0 -maxdiff=0.02]" << endl;
+    cout << "Usage: ./eval_odometry [optional: -num=1 -prefix=try1 -offset=0 -maxdiff=0.02 -inithead=120]" << endl;
 
     Mail *mail;
     mail = new Mail();
