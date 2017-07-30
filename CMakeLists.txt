@@ -3,8 +3,9 @@ project(eval_odometry)
 
 set(CMAKE_CXX_STANDARD 11)
 
-#LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
+LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 find_package(gflags REQUIRED)
+#find_package (glog REQUIRED)
 
 include_directories(
         include
