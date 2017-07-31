@@ -18,11 +18,11 @@ using namespace std;
 #define PI 3.14159265359
 
 // static parameter
-DEFINE_int32(num, 1, "number of evaluation");
-DEFINE_string(prefix, "", "name prefix of groundtruth and slam pose file");
+DEFINE_int32(num, 2, "number of evaluation");
+DEFINE_string(prefix, "test", "name prefix of groundtruth and slam pose file");
 DEFINE_double(offset, 0, "offset during alignment of two files");
-DEFINE_double(maxdiff, 0.03, "maximum value difference between aligned frames");
-DEFINE_double(inithead, 120, "initial heading with reference to North");
+DEFINE_double(maxdiff, 0.01, "maximum value difference between aligned frames");
+DEFINE_double(inithead, 153, "initial heading with reference to North"); //220
 
 //float lengths[] = {100,200,300,400,500,600,700,800};
 float lengths[] = {200,400,600,800,1000,1200,1400,1600,1800,2000,2200,2400,2600,2800,3000,3200,3400,3600,3800,4000,4200};
@@ -30,7 +30,6 @@ float lengths[] = {200,400,600,800,1000,1200,1400,1600,1800,2000,2200,2400,2600,
 int32_t num_lengths = 21;
 
 typedef map<long double, Matrix> posemap;
-typedef vector<pair<Matrix, Matrix>> posepair;
 vector<Matrix> poses_gt, poses_result;
 vector<long double> poses_gt_a, poses_result_a;
 
@@ -96,18 +95,26 @@ posemap loadPoses_gt(string file_name){
                    &P.val[1][0], &P.val[1][1], &P.val[1][2], &y,
                    &P.val[2][0], &P.val[2][1], &P.val[2][2], &z )==13) {
             /******** GPS ecef to local enu coordinate ************/
-            cosPhi = cos(1.342086 * PI/180);
-            sinPhi = sin(1.342086 * PI/180);
-            cosLambda = cos(103.680818 * PI/180);
-            sinLambda = sin(103.680818 * PI/180);
-            tt = cosLambda * x + sinLambda * y;
-            uEast = - sinLambda * x + cosLambda * y;
-            wUp = cosPhi * tt + sinPhi * z;
-            vNorth = - sinPhi * tt + cosPhi * z;
-            P.val[0][3] = -wUp;
-            P.val[1][3] = vNorth;
-            P.val[2][3] = -uEast;
+//            cosPhi = cos(1.342086 * PI/180);
+//            sinPhi = sin(1.342086 * PI/180);
+//            cosLambda = cos(103.680818 * PI/180);
+//            sinLambda = sin(103.680818 * PI/180);
+////            cosPhi = cos(1.342086 );
+////            sinPhi = sin(1.342086 );
+////            cosLambda = cos(103.680818 );
+////            sinLambda = sin(103.680818 );
+//            tt = cosLambda * x + sinLambda * y;
+//            uEast = - sinLambda * x + cosLambda * y;
+//            wUp = cosPhi * tt + sinPhi * z;
+//            vNorth = - sinPhi * tt + cosPhi * z;
+//            P.val[0][3] = -wUp;
+//            P.val[1][3] = vNorth;
+//            P.val[2][3] = -uEast;
+
             /******** GPS ecef to local enu coordinate ************/
+            P.val[0][3] = x;
+            P.val[1][3] = - z;
+            P.val[2][3] = y;
             poses[t] = P;
         }
     }
@@ -124,7 +131,11 @@ posemap loadPoses_est(string file_name){
     while (feof(fp) == 0) {
         Matrix P = Matrix::eye(4);
         Matrix Q = Matrix::eye(4);
-        Matrix Rot = Matrix::eye(4);
+        Matrix Rot1 = Matrix::eye(4);
+        Matrix Rot2 = Matrix::eye(4);
+        Matrix Rot3 = Matrix::eye(4);
+        Matrix F1 = Matrix::eye(4);
+        Matrix F2 = Matrix::eye(4);
         long double t;
         if (fscanf(fp, "%Lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", &t,
                    &P.val[0][0], &P.val[0][1], &P.val[0][2], &P.val[0][3],
@@ -133,12 +144,28 @@ posemap loadPoses_est(string file_name){
 
             FLOAT s = sin(FLAGS_inithead * PI / 180);
             FLOAT c = cos(FLAGS_inithead * PI / 180);
-            Rot.val[0][0] = c;
-            Rot.val[0][2] = s;
-            Rot.val[2][0] = -s;
-            Rot.val[2][2] = c;
+            Rot1.val[0][0] = c;
+            Rot1.val[0][2] = s;
+            Rot1.val[2][0] = -s;
+            Rot1.val[2][2] = c;
+            Q = Rot1 * P;
 
-            Q = Rot * P;
+            FLOAT s2 = sin(-10 * PI / 180);
+            FLOAT c2 = cos(-10 * PI / 180);
+            Rot2.val[1][1] = c2;
+            Rot2.val[1][1] = -s2;
+            Rot2.val[2][1] = s2;
+            Rot2.val[2][2] = c2;
+            F1= Rot2 * Q;
+
+            FLOAT s3 = sin(-13 * PI / 180);
+            FLOAT c3 = cos(-13 * PI / 180);
+            Rot3.val[0][0] = c3;
+            Rot3.val[0][1] = -s3;
+            Rot3.val[1][0] = s3;
+            Rot3.val[1][1] = c3;
+            F2= Rot3 * F1;
+
             poses[t] = Q;
         }
     }
@@ -181,21 +208,21 @@ vector<double> trajectoryDistances_t (vector<Matrix> &poses) {
 }
 
 
-vector<float> trajectoryDistances (vector<Matrix> &poses) {
-    vector<float> dist;
+vector<double> trajectoryDistances (vector<Matrix> &poses) {
+    vector<double> dist;
     dist.push_back(0);
     for (int32_t i=1; i<poses.size(); i++) {
         Matrix P1 = poses[i-1];
         Matrix P2 = poses[i];
-        float dx = P1.val[0][3]-P2.val[0][3];
-        float dy = P1.val[1][3]-P2.val[1][3];
-        float dz = P1.val[2][3]-P2.val[2][3];
+        double dx = P1.val[0][3]-P2.val[0][3];
+        double dy = P1.val[1][3]-P2.val[1][3];
+        double dz = P1.val[2][3]-P2.val[2][3];
         dist.push_back(dist[i-1]+sqrt(dx*dx+dy*dy+dz*dz));
     }
     return dist;
 }
 
-int32_t lastFrameFromSegmentLength(vector<float> &dist,int32_t first_frame,float len) {
+int32_t lastFrameFromSegmentLength(vector<double> &dist,int32_t first_frame,float len) {
     for (int32_t i=first_frame; i<dist.size(); i++)
         if (dist[i]>dist[first_frame]+len)
             return i;
@@ -217,30 +244,57 @@ inline float translationError(Matrix &pose_error) {
     return sqrt(dx*dx+dy*dy+dz*dz);
 }
 
-vector<errors> calSequenceError_t () {
+vector<errors> calcSequenceErrors_onlytrans () {
 
-    // error vector
+// error vector
     vector<errors> err;
 
+    // parameters
+    int32_t step_size = 10; // every second
+
     // pre-compute distances (from ground truth as reference)
-    vector<double> dist = trajectoryDistances_t(poses_gt);
+    vector<double> dist = trajectoryDistances(poses_gt);
 
     // for all start positions do
-    for (int32_t first_frame=0; first_frame<poses_gt.size(); ++first_frame) {
-        int32_t last_frame = first_frame - 1;
-        if (last_frame==-1)
-            continue;
-        Matrix pose_delta_gt     = Matrix::inv(poses_gt[first_frame])*poses_gt[last_frame];
-        Matrix pose_delta_result = Matrix::inv(poses_result[first_frame])*poses_result[last_frame];
-        Matrix pose_error        = Matrix::inv(pose_delta_result)*pose_delta_gt;
-        float r_err = rotationError(pose_error);
-        float t_err = translationError(pose_error);
-        // compute speed
-        auto num_frames = (float)(last_frame-first_frame+1);
-        double time_diff = poses_gt_a[first_frame] - poses_gt_a[last_frame];
-        double speed = dist[first_frame]/time_diff;
-        // write to file
-        err.emplace_back(first_frame,r_err,t_err,100,(float)speed);
+    for (int32_t first_frame=0; first_frame<poses_gt.size(); first_frame+=step_size) {
+
+        // for all segment lengths do
+        for (int32_t i=0; i<num_lengths; i++) {
+
+            // current length
+            float len = lengths[i];
+
+            // compute last frame
+            int32_t last_frame = lastFrameFromSegmentLength(dist,first_frame,len);
+
+            // continue, if sequence not long enough
+            if (last_frame==-1)
+                continue;
+
+            // compute rotational and translational errors
+            Matrix pose_delta_gt     = Matrix::inv(poses_gt[first_frame])*poses_gt[last_frame];
+            Matrix pose_delta_result = Matrix::inv(poses_result[first_frame])*poses_result[last_frame];
+            Matrix pose_error        = Matrix::inv(pose_delta_result)*pose_delta_gt;
+            FLOAT dx_g,dy_g,dz_g,dx_e,dy_e,dz_e;
+            dx_g = poses_gt[last_frame].val[0][3] - poses_gt[first_frame].val[0][3];
+            dy_g = poses_gt[last_frame].val[1][3] - poses_gt[first_frame].val[1][3];
+            dz_g = poses_gt[last_frame].val[2][3] - poses_gt[first_frame].val[2][3];
+            dx_e = poses_result[last_frame].val[0][3] - poses_result[first_frame].val[0][3];
+            dy_e = poses_result[last_frame].val[1][3] - poses_result[first_frame].val[1][3];
+            dz_e = poses_result[last_frame].val[2][3] - poses_result[first_frame].val[2][3];
+            float dx = dx_g - dx_e;
+            float dy = dy_g - dy_e;
+            float dz = dz_g - dz_e;
+            float r_err = rotationError(pose_error);
+//            float t_err = translationError(pose_error);
+            float t_err = sqrt(dx*dx+dz*dz);
+            // compute speed
+            auto num_frames = last_frame-first_frame+1;
+            double speed = len/(0.1 *num_frames);
+
+            // write to file
+            err.emplace_back(first_frame,r_err/len,t_err/len,len,speed);
+        }
     }
 
     // return error vector
@@ -256,7 +310,7 @@ vector<errors> calcSequenceErrors () {
     int32_t step_size = 10; // every second
 
     // pre-compute distances (from ground truth as reference)
-    vector<float> dist = trajectoryDistances(poses_gt);
+    vector<double> dist = trajectoryDistances(poses_gt);
 
     // for all start positions do
     for (int32_t first_frame=0; first_frame<poses_gt.size(); first_frame+=step_size) {
@@ -623,8 +677,8 @@ bool eval (Mail* mail) {
         }
 
         // compute sequence errors
-        vector<errors> seq_err = calcSequenceErrors();
-//        vector<errors> seq_err = calSequenceError_t();
+//        vector<errors> seq_err = calcSequenceErrors();
+        vector<errors> seq_err = calcSequenceErrors_onlytrans();
         saveSequenceErrors(seq_err,error_dir + "/" + file_name);
 
         // add to total errors
