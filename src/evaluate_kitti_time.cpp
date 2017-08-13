@@ -21,13 +21,13 @@ using namespace std;
 DEFINE_int32(num, 2, "number of evaluation");
 DEFINE_string(prefix, "test", "name prefix of groundtruth and slam pose file");
 DEFINE_double(offset, 0, "offset during alignment of two files");
-DEFINE_double(maxdiff, 0.02, "maximum value difference between aligned frames");
-DEFINE_double(inithead, 153, "initial heading with reference to North"); //220
+DEFINE_double(maxdiff, 0.05, "maximum value difference between aligned frames");
+DEFINE_double(inithead, 0, "initial heading with reference to North"); //220
 
 //float lengths[] = {100,200,300,400,500,600,700,800};
-float lengths[] = {200,400,600,800,1000,1200,1400,1600,1800,2000,2200,2400,2600,2800,3000,3200,3400,3600,3800,4000,4200};
+float lengths[] = {200,400,600,800,1000,1200,1400,1600,1800,2000,2200,2400,2600,2800,3000,3200,3400,3600};
 
-int32_t num_lengths = 21;
+int32_t num_lengths = 18;
 
 typedef map<long double, Matrix> posemap;
 vector<Matrix> poses_gt, poses_result;
@@ -113,8 +113,8 @@ posemap loadPoses_gt(string file_name){
 
             /******** GPS ecef to local enu coordinate ************/
             P.val[0][3] = x;
-            P.val[1][3] = - z;
-            P.val[2][3] = y;
+            P.val[1][3] = y;
+            P.val[2][3] = z;
             poses[t] = P;
         }
     }
@@ -168,7 +168,7 @@ posemap loadPoses_est(string file_name){
             Rot3.val[1][1] = c3;
             F2= Rot3 * F1;
 
-            poses[t] = Q;
+            poses[t] = P;
         }
     }
     fclose(fp);
@@ -679,8 +679,8 @@ bool eval (Mail* mail) {
         }
 
         // compute sequence errors
-//        vector<errors> seq_err = calcSequenceErrors();
-        vector<errors> seq_err = calcSequenceErrors_onlytrans();
+        vector<errors> seq_err = calcSequenceErrors();
+//        vector<errors> seq_err = calcSequenceErrors_onlytrans();
         saveSequenceErrors(seq_err,error_dir + "/" + file_name);
 
         // add to total errors

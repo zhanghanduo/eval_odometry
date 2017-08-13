@@ -1,0 +1,173 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+_EPS	../script/evaluate_rpe.py	/^_EPS = numpy.finfo(float).eps * 4.0$/;"	kind:variable	line:44
+align	../script/evaluate_2.py	/^def align(model,data):$/;"	kind:function	line:47
+align	../script/evaluate_2_align.py	/^def align(model,data):$/;"	kind:function	line:47
+align	../script/evaluate_3.py	/^def align(model,data):$/;"	kind:function	line:47
+align	../script/evaluate_ate.py	/^def align(model,data):$/;"	kind:function	line:47
+align	../script/evaluate_real.py	/^def align(model,data):$/;"	kind:function	line:47
+align2	../script/evaluate_3.py	/^def align2(model,data):$/;"	kind:function	line:81
+args	../script/associate.py	/^    args = parser.parse_args()$/;"	kind:variable	line:114
+args	../script/evaluate_2.py	/^    args = parser.parse_args()$/;"	kind:variable	line:127
+args	../script/evaluate_2_align.py	/^    args = parser.parse_args()$/;"	kind:variable	line:162
+args	../script/evaluate_3.py	/^    args = parser.parse_args()$/;"	kind:variable	line:158
+args	../script/evaluate_ate.py	/^    args = parser.parse_args()$/;"	kind:variable	line:127
+args	../script/evaluate_real.py	/^    args = parser.parse_args()$/;"	kind:variable	line:133
+args	../script/evaluate_rpe.py	/^    args = parser.parse_args()$/;"	kind:variable	line:324
+associate	../script/associate.py	/^def associate(first_list, second_list,offset,max_difference):$/;"	kind:function	line:71
+associate.py	../script/associate.py	1;"	kind:file	line:1
+ax	../script/draw_results.py	/^	ax = fig.add_subplot(111, projection='3d')$/;"	kind:variable	line:117
+ax	../script/draw_results.py	/^	ax = fig.add_subplot(211)$/;"	kind:variable	line:94
+ax	../script/draw_results.py	/^	ax = fig.add_subplot(212)$/;"	kind:variable	line:100
+ax	../script/draw_results.py	/^	ax = fig.add_subplot(411)$/;"	kind:variable	line:63
+ax	../script/draw_results.py	/^	ax = fig.add_subplot(412)$/;"	kind:variable	line:71
+ax	../script/draw_results.py	/^	ax = fig.add_subplot(413)$/;"	kind:variable	line:78
+ax	../script/draw_results.py	/^	ax = fig.add_subplot(414)$/;"	kind:variable	line:87
+ax	../script/evaluate_2.py	/^        ax = fig.add_subplot(111)$/;"	kind:variable	line:181
+ax	../script/evaluate_2_align.py	/^        ax = fig.add_subplot(111)$/;"	kind:variable	line:216
+ax	../script/evaluate_3.py	/^        ax = fig.add_subplot(111)$/;"	kind:variable	line:226
+ax	../script/evaluate_ate.py	/^        ax = fig.add_subplot(111)$/;"	kind:variable	line:181
+ax	../script/evaluate_real.py	/^        ax = fig.add_subplot(111)$/;"	kind:variable	line:187
+ax	../script/evaluate_rpe.py	/^        ax = fig.add_subplot(111)        $/;"	kind:variable	line:375
+compute_angle	../script/evaluate_rpe.py	/^def compute_angle(transform):$/;"	kind:function	line:168
+compute_distance	../script/evaluate_rpe.py	/^def compute_distance(transform):$/;"	kind:function	line:162
+distances_along_trajectory	../script/evaluate_rpe.py	/^def distances_along_trajectory(traj):$/;"	kind:function	line:175
+draw_pose_animation.py	../script/draw_pose_animation.py	1;"	kind:file	line:1
+draw_results.py	../script/draw_results.py	1;"	kind:file	line:1
+e	../script/draw_results.py	/^	e = linspace(0,error.max(),1000).reshape(1000)$/;"	kind:variable	line:101
+ecdf_p	../script/draw_results.py	/^	ecdf_p = ECDF(pos_error)([e])[0]$/;"	kind:variable	line:106
+ecdf_x	../script/draw_results.py	/^	ecdf_x = ECDF(error[:,0])([e])[0]$/;"	kind:variable	line:103
+ecdf_y	../script/draw_results.py	/^	ecdf_y = ECDF(error[:,1])([e])[0]$/;"	kind:variable	line:104
+ecdf_z	../script/draw_results.py	/^	ecdf_z = ECDF(error[:,2])([e])[0]$/;"	kind:variable	line:105
+error	../script/draw_results.py	/^	error = abs(pos_est - pos_rel)$/;"	kind:variable	line:95
+euler_est	../script/draw_results.py	/^	euler_est = array([transformations.euler_from_quaternion(line) for line in rot_est])$/;"	kind:variable	line:79
+euler_rel	../script/draw_results.py	/^	euler_rel = array([transformations.euler_from_quaternion(line) for line in rot_rel])$/;"	kind:variable	line:80
+evaluate_2.py	../script/evaluate_2.py	1;"	kind:file	line:1
+evaluate_2_align.py	../script/evaluate_2_align.py	1;"	kind:file	line:1
+evaluate_3.py	../script/evaluate_3.py	1;"	kind:file	line:1
+evaluate_ate.py	../script/evaluate_ate.py	1;"	kind:file	line:1
+evaluate_real.py	../script/evaluate_real.py	1;"	kind:file	line:1
+evaluate_rpe.py	../script/evaluate_rpe.py	1;"	kind:file	line:1
+evaluate_trajectory	../script/evaluate_rpe.py	/^def evaluate_trajectory(traj_gt,traj_est,param_max_pairs=10000,param_fixed_delta=False,param_delta=1.00,param_delta_unit="s",param_offset=0.00,param_scale=1.00):$/;"	kind:function	line:204
+f	../script/evaluate_rpe.py	/^        f = open(args.save,"w")$/;"	kind:variable	line:346
+fig	../script/draw_results.py	/^	fig = plt.figure()$/;"	kind:variable	line:116
+fig	../script/draw_results.py	/^	fig = plt.figure()$/;"	kind:variable	line:61
+fig	../script/draw_results.py	/^	fig = plt.figure()$/;"	kind:variable	line:93
+fig	../script/evaluate_2.py	/^        fig = plt.figure()$/;"	kind:variable	line:180
+fig	../script/evaluate_2_align.py	/^        fig = plt.figure()$/;"	kind:variable	line:215
+fig	../script/evaluate_3.py	/^        fig = plt.figure()$/;"	kind:variable	line:225
+fig	../script/evaluate_ate.py	/^        fig = plt.figure()$/;"	kind:variable	line:180
+fig	../script/evaluate_real.py	/^        fig = plt.figure()$/;"	kind:variable	line:186
+fig	../script/evaluate_rpe.py	/^        fig = plt.figure()$/;"	kind:variable	line:374
+file	../script/draw_results.py	/^	file = open(filename, 'r')$/;"	kind:variable	line:49
+file	../script/evaluate_2.py	/^        file = open(args.save,"w")$/;"	kind:variable	line:170
+file	../script/evaluate_2.py	/^        file = open(args.save_associations,"w")$/;"	kind:variable	line:165
+file	../script/evaluate_2_align.py	/^        file = open(args.save,"w")$/;"	kind:variable	line:205
+file	../script/evaluate_2_align.py	/^        file = open(args.save_associations,"w")$/;"	kind:variable	line:200
+file	../script/evaluate_3.py	/^        file = open(args.save,"w")$/;"	kind:variable	line:215
+file	../script/evaluate_3.py	/^        file = open(args.save_associations,"w")$/;"	kind:variable	line:210
+file	../script/evaluate_ate.py	/^        file = open(args.save,"w")$/;"	kind:variable	line:170
+file	../script/evaluate_ate.py	/^        file = open(args.save_associations,"w")$/;"	kind:variable	line:165
+file	../script/evaluate_real.py	/^        file = open(args.save,"w")$/;"	kind:variable	line:176
+file	../script/evaluate_real.py	/^        file = open(args.save_associations,"w")$/;"	kind:variable	line:171
+filename	../script/draw_results.py	/^		filename = sys.argv[1]$/;"	kind:variable	line:45
+filename	../script/draw_results.py	/^filename = "\/home\/eee\/drones\/src\/ni_slam\/script\/tum\/fr1_desk_est.txt"$/;"	kind:variable	line:40
+find_closest_index	../script/evaluate_rpe.py	/^def find_closest_index(L,t):$/;"	kind:function	line:110
+first_list	../script/associate.py	/^    first_list = read_file_list(args.first_file)$/;"	kind:variable	line:116
+first_list	../script/evaluate_2.py	/^    first_list = associate.read_file_list(args.first_file)$/;"	kind:variable	line:129
+first_list	../script/evaluate_2_align.py	/^    first_list = associate.read_file_list(args.first_file)$/;"	kind:variable	line:164
+first_list	../script/evaluate_3.py	/^    first_list = associate.read_file_list(args.first_file)$/;"	kind:variable	line:160
+first_list	../script/evaluate_ate.py	/^    first_list = associate.read_file_list(args.first_file)$/;"	kind:variable	line:129
+first_list	../script/evaluate_real.py	/^    first_list = associate.read_file_list(args.first_file)$/;"	kind:variable	line:135
+first_stamps	../script/evaluate_2.py	/^    first_stamps = first_list.keys()$/;"	kind:variable	line:143
+first_stamps	../script/evaluate_2_align.py	/^    first_stamps = first_list.keys()$/;"	kind:variable	line:178
+first_stamps	../script/evaluate_3.py	/^    first_stamps = first_list.keys()$/;"	kind:variable	line:173
+first_stamps	../script/evaluate_ate.py	/^    first_stamps = first_list.keys()$/;"	kind:variable	line:143
+first_stamps	../script/evaluate_real.py	/^    first_stamps = first_list.keys()$/;"	kind:variable	line:149
+first_xyz	../script/evaluate_2.py	/^    first_xyz = numpy.matrix([[float(value) for value in first_list[a][0:3]] for a,b in matches]).transpose()$/;"	kind:variable	line:137
+first_xyz	../script/evaluate_2_align.py	/^    first_xyz = numpy.matrix([[float(value) for value in first_list[a][0:3]] for a,b in matches]).transpose()$/;"	kind:variable	line:172
+first_xyz	../script/evaluate_3.py	/^    first_xyz = numpy.matrix([[float(value) for value in first_list[a][0:3]] for a,b in matches]).transpose()$/;"	kind:variable	line:169
+first_xyz	../script/evaluate_ate.py	/^    first_xyz = numpy.matrix([[float(value) for value in first_list[a][0:3]] for a,b in matches]).transpose()$/;"	kind:variable	line:137
+first_xyz	../script/evaluate_real.py	/^    first_xyz = numpy.matrix([[float(value) for value in first_list[a][0:3]] for a,b in matches]).transpose()$/;"	kind:variable	line:143
+first_xyz2	../script/evaluate_3.py	/^    first_xyz2 = numpy.matrix([[float(value) for value in first_list[a][0:3]] for a,b in matches2]).transpose()$/;"	kind:variable	line:187
+first_xyz_full	../script/evaluate_2.py	/^    first_xyz_full = numpy.matrix([[float(value) for value in first_list[b][0:3]] for b in first_stamps]).transpose()$/;"	kind:variable	line:145
+first_xyz_full	../script/evaluate_2_align.py	/^    first_xyz_full = numpy.matrix([[float(value) for value in first_list[b][0:3]] for b in first_stamps]).transpose()$/;"	kind:variable	line:180
+first_xyz_full	../script/evaluate_3.py	/^    first_xyz_full = numpy.matrix([[float(value) for value in first_list[b][0:3]] for b in first_stamps]).transpose()$/;"	kind:variable	line:175
+first_xyz_full	../script/evaluate_ate.py	/^    first_xyz_full = numpy.matrix([[float(value) for value in first_list[b][0:3]] for b in first_stamps]).transpose()$/;"	kind:variable	line:145
+first_xyz_full	../script/evaluate_real.py	/^    first_xyz_full = numpy.matrix([[float(value) for value in first_list[b][0:3]] for b in first_stamps]).transpose()$/;"	kind:variable	line:151
+matches	../script/associate.py	/^    matches = associate(first_list, second_list,float(args.offset),float(args.max_difference))    $/;"	kind:variable	line:119
+matches	../script/evaluate_2.py	/^    matches = associate.associate(first_list, second_list,float(args.offset),float(args.max_difference))$/;"	kind:variable	line:132
+matches	../script/evaluate_2_align.py	/^    matches = associate.associate(first_list, second_list,float(args.offset),float(args.max_difference))$/;"	kind:variable	line:167
+matches	../script/evaluate_3.py	/^    matches = associate.associate(first_list, second_list, float(args.offset), float(args.max_difference))$/;"	kind:variable	line:164
+matches	../script/evaluate_ate.py	/^    matches = associate.associate(first_list, second_list,float(args.offset),float(args.max_difference))    $/;"	kind:variable	line:132
+matches	../script/evaluate_real.py	/^    matches = associate.associate(first_list, second_list,float(args.offset),float(args.max_difference))    $/;"	kind:variable	line:138
+matches2	../script/evaluate_3.py	/^    matches2 = associate.associate(first_list, third_list, float(args.offset), float(args.max_difference))$/;"	kind:variable	line:182
+max_res	../script/draw_results.py	/^	max_res = results[:,15]$/;"	kind:variable	line:56
+ominus	../script/evaluate_rpe.py	/^def ominus(a,b):$/;"	kind:function	line:138
+path_lenth	../script/draw_results.py	/^	path_lenth = sum(array([sqrt(sum((pos_rel[i+1]-pos_rel[i])**2)) for i in xrange(0, pos_rel.shape[0]-1)]))$/;"	kind:variable	line:121
+percentile	../script/evaluate_rpe.py	/^def percentile(seq,q):$/;"	kind:function	line:299
+plot_traj	../script/evaluate_2.py	/^def plot_traj(ax,stamps,traj,style,color,label):$/;"	kind:function	line:81
+plot_traj	../script/evaluate_2_align.py	/^def plot_traj(ax,stamps,traj,style,color,label):$/;"	kind:function	line:86
+plot_traj	../script/evaluate_3.py	/^def plot_traj(ax,stamps,traj,style,color,label,linw):$/;"	kind:function	line:111
+plot_traj	../script/evaluate_ate.py	/^def plot_traj(ax,stamps,traj,style,color,label):$/;"	kind:function	line:81
+plot_traj	../script/evaluate_real.py	/^def plot_traj(ax,stamps,traj,style,color,label):$/;"	kind:function	line:87
+plot_traj1	../script/evaluate_2_align.py	/^def plot_traj1(ax,stamps,traj,style,color,label):$/;"	kind:function	line:117
+pos_error	../script/draw_results.py	/^	pos_error = sqrt(error[:,0]**2 + error[:,1]**2+error[:,2]**2)$/;"	kind:variable	line:102
+pos_est	../script/draw_results.py	/^	pos_est = results[:,1:4]$/;"	kind:variable	line:52
+pos_rel	../script/draw_results.py	/^	pos_rel = results[:,8:11]$/;"	kind:variable	line:53
+psr	../script/draw_results.py	/^	psr     = results[:,16]$/;"	kind:variable	line:57
+read_file_list	../script/associate.py	/^def read_file_list(filename):$/;"	kind:function	line:49
+read_trajectory	../script/evaluate_rpe.py	/^def read_trajectory(filename, matrix=True):$/;"	kind:function	line:76
+result	../script/evaluate_rpe.py	/^    result = evaluate_trajectory(traj_gt,$/;"	kind:variable	line:332
+results	../script/draw_results.py	/^	results = array([map(float, line.split(' ')) for line in file if line.strip() !=""])$/;"	kind:variable	line:51
+rot_error	../script/evaluate_rpe.py	/^    rot_error = numpy.array(result)[:,5]$/;"	kind:variable	line:343
+rot_est	../script/draw_results.py	/^	rot_est = results[:,4:8]$/;"	kind:variable	line:54
+rot_rel	../script/draw_results.py	/^	rot_rel = results[:,11:15]$/;"	kind:variable	line:55
+rotations_along_trajectory	../script/evaluate_rpe.py	/^def rotations_along_trajectory(traj,scale):$/;"	kind:function	line:189
+scale	../script/evaluate_rpe.py	/^def scale(a,scalar):$/;"	kind:function	line:151
+second_list	../script/associate.py	/^    second_list = read_file_list(args.second_file)$/;"	kind:variable	line:117
+second_list	../script/evaluate_2.py	/^    second_list = associate.read_file_list(args.second_file)$/;"	kind:variable	line:130
+second_list	../script/evaluate_2_align.py	/^    second_list = associate.read_file_list(args.second_file)$/;"	kind:variable	line:165
+second_list	../script/evaluate_3.py	/^    second_list = associate.read_file_list(args.second_file)$/;"	kind:variable	line:161
+second_list	../script/evaluate_ate.py	/^    second_list = associate.read_file_list(args.second_file)$/;"	kind:variable	line:130
+second_list	../script/evaluate_real.py	/^    second_list = associate.read_file_list(args.second_file)$/;"	kind:variable	line:136
+second_stamps	../script/evaluate_2.py	/^    second_stamps = second_list.keys()$/;"	kind:variable	line:147
+second_stamps	../script/evaluate_2_align.py	/^    second_stamps = second_list.keys()$/;"	kind:variable	line:182
+second_stamps	../script/evaluate_3.py	/^    second_stamps = second_list.keys()$/;"	kind:variable	line:177
+second_stamps	../script/evaluate_ate.py	/^    second_stamps = second_list.keys()$/;"	kind:variable	line:147
+second_stamps	../script/evaluate_real.py	/^    second_stamps = second_list.keys()$/;"	kind:variable	line:153
+second_xyz	../script/evaluate_2.py	/^    second_xyz = numpy.matrix([[float(value)*float(args.scale) for value in second_list[b][0:3]] for a,b in matches]).transpose()$/;"	kind:variable	line:138
+second_xyz	../script/evaluate_2_align.py	/^    second_xyz = numpy.matrix([[float(value)*float(args.scale) for value in second_list[b][0:3]] for a,b in matches]).transpose()$/;"	kind:variable	line:173
+second_xyz	../script/evaluate_3.py	/^    second_xyz = numpy.matrix([[float(value)*float(args.scale) for value in second_list[b][0:3]] for a,b in matches]).transpose()$/;"	kind:variable	line:170
+second_xyz	../script/evaluate_ate.py	/^    second_xyz = numpy.matrix([[float(value)*float(args.scale) for value in second_list[b][0:3]] for a,b in matches]).transpose()$/;"	kind:variable	line:138
+second_xyz	../script/evaluate_real.py	/^    second_xyz = numpy.matrix([[float(value)*float(args.scale) for value in second_list[b][0:3]] for a,b in matches]).transpose()$/;"	kind:variable	line:144
+second_xyz_aligned	../script/evaluate_2.py	/^    second_xyz_aligned = rot * second_xyz + trans$/;"	kind:variable	line:141
+second_xyz_aligned	../script/evaluate_2_align.py	/^    second_xyz_aligned = rot * second_xyz + trans$/;"	kind:variable	line:176
+second_xyz_aligned	../script/evaluate_ate.py	/^    second_xyz_aligned = rot * second_xyz + trans$/;"	kind:variable	line:141
+second_xyz_aligned	../script/evaluate_real.py	/^    second_xyz_aligned = rot * second_xyz + trans$/;"	kind:variable	line:147
+second_xyz_full	../script/evaluate_2.py	/^    second_xyz_full = numpy.matrix([[float(value)*float(args.scale) for value in second_list[b][0:3]] for b in second_stamps]).transpose()$/;"	kind:variable	line:149
+second_xyz_full	../script/evaluate_2_align.py	/^    second_xyz_full = numpy.matrix([[float(value)*float(args.scale) for value in second_list[b][0:3]] for b in second_stamps]).transpose()$/;"	kind:variable	line:184
+second_xyz_full	../script/evaluate_3.py	/^    second_xyz_full = numpy.matrix([[float(value)*float(args.scale) for value in second_list[b][0:3]] for b in second_stamps]).transpose()$/;"	kind:variable	line:179
+second_xyz_full	../script/evaluate_ate.py	/^    second_xyz_full = numpy.matrix([[float(value)*float(args.scale) for value in second_list[b][0:3]] for b in second_stamps]).transpose()$/;"	kind:variable	line:149
+second_xyz_full	../script/evaluate_real.py	/^    second_xyz_full = numpy.matrix([[float(value)*float(args.scale) for value in second_list[b][0:3]] for b in second_stamps]).transpose()$/;"	kind:variable	line:155
+second_xyz_full_aligned	../script/evaluate_2.py	/^    second_xyz_full_aligned = rot * second_xyz_full + trans$/;"	kind:variable	line:150
+second_xyz_full_aligned	../script/evaluate_2_align.py	/^    second_xyz_full_aligned = rot * second_xyz_full + trans + 95$/;"	kind:variable	line:185
+second_xyz_full_aligned	../script/evaluate_3.py	/^    second_xyz_full_aligned = rot * second_xyz_full + trans$/;"	kind:variable	line:180
+second_xyz_full_aligned	../script/evaluate_ate.py	/^    second_xyz_full_aligned = rot * second_xyz_full + trans$/;"	kind:variable	line:150
+second_xyz_full_aligned	../script/evaluate_real.py	/^    second_xyz_full_aligned = rot * second_xyz_full + trans$/;"	kind:variable	line:156
+stamps	../script/evaluate_rpe.py	/^    stamps = numpy.array(result)[:,0]$/;"	kind:variable	line:341
+third_list	../script/evaluate_3.py	/^    third_list = associate.read_file_list(args.third_file)$/;"	kind:variable	line:162
+third_stamps	../script/evaluate_3.py	/^    third_stamps = third_list.keys()$/;"	kind:variable	line:192
+third_xyz	../script/evaluate_3.py	/^    third_xyz = numpy.matrix([[float(value)*float(args.scale) for value in third_list[b][0:3]] for a,b in matches2]).transpose()$/;"	kind:variable	line:188
+third_xyz_full	../script/evaluate_3.py	/^    third_xyz_full = numpy.matrix([[float(value)*float(args.scale) for value in third_list[b][0:3]] for b in third_stamps]).transpose()$/;"	kind:variable	line:194
+third_xyz_full_aligned	../script/evaluate_3.py	/^    third_xyz_full_aligned = rot2 * third_xyz_full + trans2$/;"	kind:variable	line:195
+time	../script/draw_results.py	/^	time = results[:,0] - results[0,0]$/;"	kind:variable	line:58
+traj_est	../script/evaluate_rpe.py	/^    traj_est = read_trajectory(args.estimated_file)$/;"	kind:variable	line:330
+traj_gt	../script/evaluate_rpe.py	/^    traj_gt = read_trajectory(args.groundtruth_file)$/;"	kind:variable	line:329
+trans_error	../script/evaluate_rpe.py	/^    trans_error = numpy.array(result)[:,4]$/;"	kind:variable	line:342
+transform44	../script/evaluate_rpe.py	/^def transform44(l):$/;"	kind:function	line:46
+update_lines	../script/draw_pose_animation.py	/^def update_lines(num, pos_est, lines):$/;"	kind:function	line:17
